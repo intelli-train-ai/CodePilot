@@ -54,6 +54,13 @@
   }
   .ctx-value.missing { color: var(--orange); }
   .ctx-value.ok { color: var(--green); }
+  .ctx-input {
+    background: var(--bg2); color: var(--green); border: 1px solid var(--border);
+    border-radius: 3px; padding: 1px 4px; font-family: inherit; font-size: 11px;
+    width: 180px; outline: none;
+  }
+  .ctx-input:focus { border-color: var(--cyan); }
+  .ctx-input::placeholder { color: var(--text2); opacity: .5; }
   .ctx-actions { display: flex; gap: 6px; margin-top: 6px; }
   .ctx-btn {
     background: none; border: 1px solid var(--border); border-radius: 4px;
@@ -203,10 +210,14 @@
       <span style="font-weight:600;text-transform:uppercase;letter-spacing:.05em">Test Context</span>
     </div>
     <div class="ctx-row"><span class="ctx-label">Status:</span><span class="ctx-value missing" id="ctxStatus">initializing...</span></div>
-    <div class="ctx-row"><span class="ctx-label">Session:</span><span class="ctx-value" id="ctxSession">-</span></div>
-    <div class="ctx-row"><span class="ctx-label">Provider:</span><span class="ctx-value" id="ctxProvider">-</span></div>
-    <div class="ctx-row"><span class="ctx-label">Messages:</span><span class="ctx-value" id="ctxMessages">-</span></div>
-    <div class="ctx-row"><span class="ctx-label">Tasks:</span><span class="ctx-value" id="ctxTasks">-</span></div>
+    <div class="ctx-row"><span class="ctx-label">Session:</span><input class="ctx-input" id="ctxSession" placeholder="session id" oninput="onCtxEdit('sessionId', this.value)"></div>
+    <div class="ctx-row"><span class="ctx-label">Provider:</span><input class="ctx-input" id="ctxProvider" placeholder="provider id" oninput="onCtxEdit('providerId', this.value)"></div>
+    <div class="ctx-row"><span class="ctx-label">User Msg:</span><input class="ctx-input" id="ctxUserMsg" placeholder="user message id" oninput="onCtxEdit('userMessageId', this.value)"></div>
+    <div class="ctx-row"><span class="ctx-label">Asst Msg:</span><input class="ctx-input" id="ctxAsstMsg" placeholder="assistant message id" oninput="onCtxEdit('assistantMessageId', this.value)"></div>
+    <div class="ctx-row"><span class="ctx-label">Task:</span><input class="ctx-input" id="ctxTask" placeholder="task id" oninput="onCtxEdit('taskId', this.value)"></div>
+    <div class="ctx-row"><span class="ctx-label">Tag:</span><input class="ctx-input" id="ctxTag" placeholder="tag id" oninput="onCtxEdit('tagId', this.value)"></div>
+    <div class="ctx-row"><span class="ctx-label">Permission:</span><input class="ctx-input" id="ctxPermission" placeholder="permission request id" oninput="onCtxEdit('permissionRequestId', this.value)"></div>
+    <div class="ctx-row"><span class="ctx-label">Work Dir:</span><input class="ctx-input" id="ctxWorkDir" placeholder="/path/to/dir" oninput="onCtxEdit('workDir', this.value)"></div>
     <div class="ctx-actions">
       <button class="ctx-btn" onclick="seedData()">Re-seed Data</button>
       <button class="ctx-btn danger" onclick="cleanData()">Clean Up</button>
@@ -288,14 +299,14 @@ async function seedData() {
     CTX.skillNames = c.skillNames || [];
     CTX.permissionRequestId = c.permissionRequestId || '';
 
-    document.getElementById('ctxSession').textContent = CTX.sessionId.substring(0, 20) + '...';
-    document.getElementById('ctxSession').className = 'ctx-value ok';
-    document.getElementById('ctxProvider').textContent = CTX.providerId.substring(0, 20) + '...';
-    document.getElementById('ctxProvider').className = 'ctx-value ok';
-    document.getElementById('ctxMessages').textContent = d.summary.messages;
-    document.getElementById('ctxMessages').className = 'ctx-value ok';
-    document.getElementById('ctxTasks').textContent = d.summary.tasks;
-    document.getElementById('ctxTasks').className = 'ctx-value ok';
+    document.getElementById('ctxSession').value = CTX.sessionId;
+    document.getElementById('ctxProvider').value = CTX.providerId;
+    document.getElementById('ctxUserMsg').value = CTX.userMessageId;
+    document.getElementById('ctxAsstMsg').value = CTX.assistantMessageId;
+    document.getElementById('ctxTask').value = CTX.taskId;
+    document.getElementById('ctxTag').value = CTX.tagId;
+    document.getElementById('ctxPermission').value = CTX.permissionRequestId;
+    document.getElementById('ctxWorkDir').value = CTX.workDir;
     setStatus('ready', false, true);
 
     buildEndpoints();
@@ -309,12 +320,21 @@ async function cleanData() {
   try {
     await fetch('/api/api-test/seed', { method: 'DELETE' });
     setStatus('cleaned — click Re-seed to recreate');
-    document.getElementById('ctxSession').textContent = '-';
-    document.getElementById('ctxProvider').textContent = '-';
-    document.getElementById('ctxMessages').textContent = '-';
-    document.getElementById('ctxTasks').textContent = '-';
+    ['ctxSession','ctxProvider','ctxUserMsg','ctxAsstMsg','ctxTask','ctxTag','ctxPermission','ctxWorkDir'].forEach(function(id) {
+      document.getElementById(id).value = '';
+    });
   } catch (e) {
     setStatus('clean error: ' + e.message, true);
+  }
+}
+
+function onCtxEdit(key, value) {
+  CTX[key] = value;
+  buildEndpoints();
+  renderSidebar(document.getElementById('search').value);
+  // If an endpoint is selected, re-select it to refresh the body
+  if (activeEndpoint >= 0 && activeEndpoint < ENDPOINTS.length) {
+    selectEndpoint(activeEndpoint);
   }
 }
 
