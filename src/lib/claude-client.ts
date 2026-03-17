@@ -508,9 +508,10 @@ export function streamClaude(options: ClaudeStreamOptions): ReadableStream<strin
         }
 
         // Pass through SDK-specific options from ClaudeStreamOptions
-        if (thinking) {
-          queryOptions.thinking = thinking;
-        }
+        // NOTE: Disabled thinking option — CLI 2.1.72 does not support --thinking flag
+        // if (thinking) {
+        //   queryOptions.thinking = thinking;
+        // }
         if (effort) {
           queryOptions.effort = effort;
         }
