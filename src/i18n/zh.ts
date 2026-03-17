@@ -11,6 +11,7 @@ const zh: Record<TranslationKey, string> = {
   'nav.toggleTheme': '切换主题',
   'nav.bridge': '桥接',
   'nav.cliTools': 'CLI 工具',
+  'nav.workflow': '工作流',
 
   // ── Chat list panel ─────────────────────────────────────────
   'chatList.justNow': '刚刚',
