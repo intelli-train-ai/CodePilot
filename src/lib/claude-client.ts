@@ -20,6 +20,7 @@ import { registerConversation, unregisterConversation } from './conversation-reg
 import { captureCapabilities, setCachedPlugins } from './agent-sdk-capabilities';
 import { getSetting, updateSdkSessionId, createPermissionRequest } from './db';
 import { resolveForClaudeCode, toClaudeCodeEnv } from './provider-resolver';
+import { findPresetForLegacy } from './provider-catalog';
 import { findClaudeBinary, findGitBash, getExpandedPath, invalidateClaudePathCache } from './platform';
 import { notifyPermissionRequest, notifyGeneric } from './telegram-bot';
 import { classifyError, formatClassifiedError } from './error-classifier';
@@ -539,10 +540,21 @@ export function streamClaude(options: ClaudeStreamOptions): ReadableStream<strin
         }
 
         // Pass through SDK-specific options from ClaudeStreamOptions
-        // NOTE: Disabled thinking option — CLI 2.1.72 does not support --thinking flag
-        // if (thinking) {
-        //   queryOptions.thinking = thinking;
-        // }
+        // For sdkProxyOnly providers (MiniMax, Kimi, GLM, etc.) that always return
+        // thinking blocks in responses, we must enable thinking in the request so
+        // the CLI expects and correctly parses them. Without this, the CLI crashes
+        // with exit code 1 upon receiving unexpected thinking content blocks.
+        const preset = resolved.provider
+          ? findPresetForLegacy(resolved.provider.base_url, resolved.provider.provider_type)
+          : undefined;
+        if (preset?.sdkProxyOnly) {
+          queryOptions.thinking = { type: 'enabled', budgetTokens: 10000 };
+          console.log('[claude-client] sdkProxyOnly provider detected, enabled thinking for compatibility', {
+            provider: resolved.provider?.name,
+            preset: preset.key,
+            thinking: queryOptions.thinking,
+          });
+        }
         if (effort) {
           queryOptions.effort = effort;
         }
