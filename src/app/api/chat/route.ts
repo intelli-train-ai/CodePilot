@@ -1,6 +1,5 @@
 import { NextRequest } from 'next/server';
 import { streamClaude } from '@/lib/claude-client';
-import { detectSkill, generateWorkflow, getWorkflowSystemPrompt, scanProjectSkills, generateWorkflowFromSkills, getWorkflowSystemPromptFromSkills } from '@/lib/workflow-templates';
 import { addMessage, getMessages, getSession, updateSessionTitle, updateSdkSessionId, updateSessionModel, updateSessionProvider, updateSessionProviderId, getSetting, acquireSessionLock, renewSessionLock, releaseSessionLock, setSessionRuntimeStatus, syncSdkTasks } from '@/lib/db';
 import { resolveProvider as resolveProviderUnified } from '@/lib/provider-resolver';
 import { notifySessionStart, notifySessionComplete, notifySessionError } from '@/lib/telegram-bot';
@@ -343,45 +342,6 @@ Start by greeting the user and asking the first question.
       }
     }
 
-    // Workflow detection: check if user message triggers a workflow skill
-    let workflowSystemPrompt = '';
-    const detectedSkill = detectSkill(content);
-    if (detectedSkill) {
-      try {
-        // First try: scan project directory for real skill files
-        const workDir = session.sdk_cwd || session.working_directory || '';
-        const projectScan = workDir ? scanProjectSkills(workDir) : null;
-
-        let workflow;
-        if (projectScan) {
-          // Dynamic workflow from project's actual skill files
-          workflow = generateWorkflowFromSkills(projectScan, content);
-          const phases = workflow.phases.map((p: { id: string; name: string }) => ({ id: p.id, name: p.name }));
-          workflowSystemPrompt = getWorkflowSystemPromptFromSkills(projectScan, phases);
-          console.log('[chat API] Project skills detected:', projectScan.skills.map(s => s.folderName).join(', '));
-        } else {
-          // Fallback: use hardcoded workflow template
-          workflow = generateWorkflow(detectedSkill, content);
-          const phases = workflow.phases.map((p: { id: string; name: string }) => ({ id: p.id, name: p.name }));
-          workflowSystemPrompt = getWorkflowSystemPrompt(detectedSkill, phases);
-        }
-
-        // Push workflow to the status API
-        await fetch(`http://localhost:${process.env.PORT || 3000}/api/workflow-status`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ type: 'full', workflow }),
-        });
-        console.log('[chat API] Workflow detected:', detectedSkill, '- pushed to workflow-status API');
-      } catch (e) {
-        console.warn('[chat API] Failed to initialize workflow:', e);
-      }
-    }
-
-    if (workflowSystemPrompt) {
-      finalSystemPrompt = (finalSystemPrompt || '') + '\n\n' + workflowSystemPrompt;
-    }
-
     // Load recent conversation history from DB as fallback context.
     // This is used when SDK session resume is unavailable or fails,
     // so the model still has conversation context.
@@ -481,7 +441,6 @@ async function collectStreamResponse(
   const reader = stream.getReader();
   const contentBlocks: MessageContentBlock[] = [];
   let currentText = '';
-  let workflowTextBuffer = '';
   let tokenUsage: TokenUsage | null = null;
   let hasError = false;
   let errorMessage = '';
@@ -502,28 +461,6 @@ async function collectStreamResponse(
               // Skip permission_request and tool_output events - not saved as message content
             } else if (event.type === 'text') {
               currentText += event.data;
-              // Track text for workflow event summaries
-              workflowTextBuffer += event.data;
-              if (workflowTextBuffer.length > 300 && (event.data.includes('\n') || workflowTextBuffer.length > 600)) {
-                const summary = workflowTextBuffer.slice(0, 150).replace(/\n/g, ' ').trim();
-                if (summary) {
-                  fetch(`http://localhost:${process.env.PORT || 3000}/api/workflow-status`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                      type: 'event',
-                      event: {
-                        id: `evt-text-${Date.now()}`,
-                        timestamp: new Date().toISOString(),
-                        phase_id: '',
-                        type: 'quality_check',
-                        message: `💬 ${summary}${workflowTextBuffer.length > 150 ? '...' : ''}`,
-                      },
-                    }),
-                  }).catch(() => {});
-                }
-                workflowTextBuffer = '';
-              }
             } else if (event.type === 'tool_use') {
               // Flush any accumulated text before the tool use block
               if (currentText.trim()) {
@@ -538,24 +475,6 @@ async function collectStreamResponse(
                   name: toolData.name,
                   input: toolData.input,
                 });
-                // Push tool_use as workflow event (so Monitor shows real-time tool activity)
-                const inputSummary = typeof toolData.input === 'object'
-                  ? Object.entries(toolData.input).map(([k, v]) => `${k}: ${String(v).slice(0, 60)}`).join(', ')
-                  : String(toolData.input).slice(0, 100);
-                fetch(`http://localhost:${process.env.PORT || 3000}/api/workflow-status`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    type: 'event',
-                    event: {
-                      id: `evt-tool-${Date.now()}`,
-                      timestamp: new Date().toISOString(),
-                      phase_id: '',
-                      type: 'asset_created',
-                      message: `🔧 ${toolData.name}(${inputSummary})`,
-                    },
-                  }),
-                }).catch(() => {});
               } catch {
                 // skip malformed tool_use data
               }
@@ -580,23 +499,6 @@ async function collectStreamResponse(
                 } else {
                   seenToolResultIds.add(resultData.tool_use_id);
                   contentBlocks.push(newBlock);
-                  // Push tool_result as workflow event (especially errors)
-                  if (resultData.is_error) {
-                    fetch(`http://localhost:${process.env.PORT || 3000}/api/workflow-status`, {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        type: 'event',
-                        event: {
-                          id: `evt-err-${Date.now()}`,
-                          timestamp: new Date().toISOString(),
-                          phase_id: '',
-                          type: 'error',
-                          message: `❌ Tool error: ${String(resultData.content).slice(0, 120)}`,
-                        },
-                      }),
-                    }).catch(() => {});
-                  }
                 }
               } catch {
                 // skip malformed tool_result data
@@ -623,56 +525,6 @@ async function collectStreamResponse(
                 }
               } catch {
                 // skip malformed task_update data
-              }
-            } else if (event.type === 'workflow_progress') {
-              // Forward workflow progress to the workflow-status API
-              try {
-                const progressData = JSON.parse(event.data);
-                await fetch(`http://localhost:${process.env.PORT || 3000}/api/workflow-status`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    type: 'phase_update',
-                    phase_id: progressData.phase_id,
-                    data: {
-                      status: progressData.status,
-                      progress: progressData.progress,
-                      ...(progressData.status === 'in_progress' ? { started_at: new Date().toISOString() } : {}),
-                      ...(progressData.status === 'completed' ? { completed_at: new Date().toISOString(), progress: 100 } : {}),
-                    },
-                  }),
-                });
-                // Also add an event to the log
-                await fetch(`http://localhost:${process.env.PORT || 3000}/api/workflow-status`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    type: 'event',
-                    event: {
-                      id: `evt-${Date.now()}`,
-                      timestamp: new Date().toISOString(),
-                      phase_id: progressData.phase_id,
-                      type: progressData.status === 'completed' ? 'phase_complete' : 'phase_start',
-                      message: `Phase ${progressData.phase_id} → ${progressData.status} (${progressData.progress}%)`,
-                    },
-                  }),
-                });
-                // Update role current action
-                const phaseName = progressData.phase_id;
-                const action = progressData.status === 'completed'
-                  ? `✅ ${phaseName} 完成`
-                  : `⏳ 正在执行 ${phaseName}`;
-                fetch(`http://localhost:${process.env.PORT || 3000}/api/workflow-status`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    type: 'role_update',
-                    role_id: 'claude',
-                    data: { current_action: action },
-                  }),
-                }).catch(() => {});
-              } catch {
-                // skip workflow update errors
               }
             } else if (event.type === 'error') {
               hasError = true;

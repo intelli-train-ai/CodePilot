@@ -470,8 +470,6 @@ export type SSEEventType =
   | 'task_update'        // SDK TodoWrite task sync
   | 'keep_alive'         // SDK keep-alive heartbeat (resets idle timer)
   | 'rewind_point'       // SDK user message with rewind checkpoint
-  | 'workflow_progress'  // workflow phase progress update
-  | 'workflow_tool'      // workflow tool execution event
   | 'done';              // stream complete
 
 export interface SSEEvent {

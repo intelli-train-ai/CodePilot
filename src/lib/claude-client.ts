@@ -933,25 +933,7 @@ export function streamClaude(options: ClaudeStreamOptions): ReadableStream<strin
               if (evt.type === 'content_block_delta' && 'delta' in evt) {
                 const delta = evt.delta;
                 if ('text' in delta && delta.text) {
-                  // Check for workflow progress markers
-                  const wfRegex = /<!--wf:([\w-]+):(\w+):(\d+)-->/g;
-                  let textToSend = delta.text;
-                  let match;
-                  while ((match = wfRegex.exec(delta.text)) !== null) {
-                    const [fullMatch, phaseId, status, progress] = match;
-                    controller.enqueue(formatSSE({
-                      type: 'workflow_progress',
-                      data: JSON.stringify({
-                        phase_id: phaseId,
-                        status,
-                        progress: parseInt(progress),
-                      }),
-                    }));
-                    textToSend = textToSend.replace(fullMatch, '');
-                  }
-                  if (textToSend) {
-                    controller.enqueue(formatSSE({ type: 'text', data: textToSend }));
-                  }
+                  controller.enqueue(formatSSE({ type: 'text', data: delta.text }));
                 }
               }
               break;

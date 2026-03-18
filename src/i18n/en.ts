@@ -14,7 +14,6 @@ const en = {
   'nav.toggleTheme': 'Toggle theme',
   'nav.bridge': 'Bridge',
   'nav.cliTools': 'CLI Tools',
-  'nav.workflow': 'Workflow',
 
   // ── Chat list panel ─────────────────────────────────────────
   'chatList.justNow': 'just now',
