@@ -407,6 +407,7 @@ export function streamClaude(options: ClaudeStreamOptions): ReadableStream<strin
       const resolved = resolveForClaudeCode(options.provider, {
         providerId: options.providerId,
         sessionProviderId: options.sessionProviderId,
+        model: options.model,
       });
 
       try {
@@ -460,10 +461,9 @@ export function streamClaude(options: ClaudeStreamOptions): ReadableStream<strin
             : ((permissionMode as Options['permissionMode']) || 'acceptEdits'),
           env: sanitizeEnv(sdkEnv),
           // Load settings so the SDK behaves like the CLI (tool permissions,
-          // CLAUDE.md, etc.). When an active provider is configured in
-          // CodePilot, skip 'user' settings because ~/.claude/settings.json
-          // may contain env overrides (ANTHROPIC_BASE_URL, ANTHROPIC_MODEL,
-          // etc.) that would conflict with the provider's configuration.
+          // CLAUDE.md, etc.). When an active provider has credentials,
+          // settingSources excludes 'user' to prevent ~/.claude/settings.json
+          // env overrides from replacing the provider's injected credentials.
           settingSources: resolved.settingSources as Options['settingSources'],
         };
 
