@@ -114,11 +114,13 @@ const FileTreeFolderContext = createContext<FileTreeFolderContextType>({
 export type FileTreeFolderProps = HTMLAttributes<HTMLDivElement> & {
   path: string;
   name: string;
+  onExpand?: () => void;
 };
 
 export const FileTreeFolder = ({
   path,
   name,
+  onExpand,
   className,
   children,
   ...props
@@ -129,7 +131,11 @@ export const FileTreeFolder = ({
 
   const handleToggle = useCallback(() => {
     togglePath(path);
-  }, [togglePath, path]);
+    if (!expandedPaths.has(path)) {
+      // Will be expanded after toggle
+      onExpand?.();
+    }
+  }, [togglePath, path, expandedPaths, onExpand]);
 
   const folderContextValue = useMemo(
     () => ({ isExpanded, name, path }),

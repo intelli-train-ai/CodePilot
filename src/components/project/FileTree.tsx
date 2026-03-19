@@ -77,7 +77,62 @@ function filterTree(nodes: FileTreeNode[], query: string): FileTreeNode[] {
     }));
 }
 
-function RenderTreeNodes({ nodes, searchQuery }: { nodes: FileTreeNode[]; searchQuery: string }) {
+function LazyFolder({
+  node,
+  searchQuery,
+  workingDirectory,
+  onLazyLoad,
+}: {
+  node: FileTreeNode;
+  searchQuery: string;
+  workingDirectory: string;
+  onLazyLoad: (parentPath: string, children: FileTreeNode[]) => void;
+}) {
+  const [loading, setLoading] = useState(false);
+  const needsLazyLoad = node.type === "directory" && !node.children;
+
+  const handleExpand = useCallback(async () => {
+    if (!needsLazyLoad || loading) return;
+    setLoading(true);
+    try {
+      const res = await fetch(
+        `/api/files?dir=${encodeURIComponent(node.path)}&baseDir=${encodeURIComponent(workingDirectory)}&depth=3&_t=${Date.now()}`
+      );
+      if (res.ok) {
+        const data = await res.json();
+        onLazyLoad(node.path, data.tree || []);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setLoading(false);
+    }
+  }, [needsLazyLoad, loading, node.path, workingDirectory, onLazyLoad]);
+
+  return (
+    <FileTreeFolder key={node.path} path={node.path} name={node.name} onExpand={needsLazyLoad ? handleExpand : undefined}>
+      {loading ? (
+        <div className="flex items-center gap-1.5 px-2 py-1 text-xs text-muted-foreground">
+          <ArrowsClockwise size={12} className="animate-spin" />
+        </div>
+      ) : node.children ? (
+        <RenderTreeNodes nodes={node.children} searchQuery={searchQuery} workingDirectory={workingDirectory} onLazyLoad={onLazyLoad} />
+      ) : null}
+    </FileTreeFolder>
+  );
+}
+
+function RenderTreeNodes({
+  nodes,
+  searchQuery,
+  workingDirectory,
+  onLazyLoad,
+}: {
+  nodes: FileTreeNode[];
+  searchQuery: string;
+  workingDirectory: string;
+  onLazyLoad: (parentPath: string, children: FileTreeNode[]) => void;
+}) {
   const filtered = searchQuery ? filterTree(nodes, searchQuery) : nodes;
 
   return (
@@ -85,11 +140,13 @@ function RenderTreeNodes({ nodes, searchQuery }: { nodes: FileTreeNode[]; search
       {filtered.map((node) => {
         if (node.type === "directory") {
           return (
-            <FileTreeFolder key={node.path} path={node.path} name={node.name}>
-              {node.children && (
-                <RenderTreeNodes nodes={node.children} searchQuery={searchQuery} />
-              )}
-            </FileTreeFolder>
+            <LazyFolder
+              key={node.path}
+              node={node}
+              searchQuery={searchQuery}
+              workingDirectory={workingDirectory}
+              onLazyLoad={onLazyLoad}
+            />
           );
         }
         return (
@@ -179,6 +236,23 @@ export function FileTree({ workingDirectory, onFileSelect, onFileAdd }: FileTree
     return () => window.removeEventListener('refresh-file-tree', handler);
   }, [fetchTree]);
 
+  // Merge lazily-loaded children into the tree
+  const handleLazyLoad = useCallback((parentPath: string, children: FileTreeNode[]) => {
+    setTree((prev) => {
+      const update = (nodes: FileTreeNode[]): FileTreeNode[] =>
+        nodes.map((n) => {
+          if (n.path === parentPath) {
+            return { ...n, children };
+          }
+          if (n.children) {
+            return { ...n, children: update(n.children) };
+          }
+          return n;
+        });
+      return update(prev);
+    });
+  }, []);
+
   // Default to all directories collapsed
   const defaultExpanded = new Set<string>();
 
@@ -225,7 +299,7 @@ export function FileTree({ workingDirectory, onFileSelect, onFileAdd }: FileTree
             onAdd={onFileAdd}
             className="border-0 rounded-none"
           >
-            <RenderTreeNodes nodes={tree} searchQuery={searchQuery} />
+            <RenderTreeNodes nodes={tree} searchQuery={searchQuery} workingDirectory={workingDirectory} onLazyLoad={handleLazyLoad} />
           </AIFileTree>
         )}
       </div>

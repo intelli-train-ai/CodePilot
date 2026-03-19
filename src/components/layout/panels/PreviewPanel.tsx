@@ -485,14 +485,15 @@ function RenderedView({
     );
   }
 
-  // Markdown / MDX
+  // Markdown / MDX — strip YAML frontmatter before rendering
+  const body = content.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, "");
   return (
     <div className="px-6 py-4 overflow-x-hidden break-words">
       <Streamdown
         className="size-full [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&_ul]:pl-6 [&_ol]:pl-6"
         plugins={streamdownPlugins}
       >
-        {content}
+        {body}
       </Streamdown>
     </div>
   );
