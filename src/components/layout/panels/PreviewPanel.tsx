@@ -248,7 +248,7 @@ export function PreviewPanel() {
           </div>
         ) : preview ? (
           previewViewMode === "rendered" && canRender ? (
-            <RenderedView content={preview.content} filePath={filePath} />
+            <RenderedView content={preview.content} filePath={filePath} workingDirectory={workingDirectory} />
           ) : (
             <SourceView preview={preview} isDark={isDark} />
           )
@@ -465,13 +465,32 @@ function getOfficeStyles(ext: string, isDark: boolean): string {
   return base;
 }
 
+/**
+ * Resolve relative image paths in markdown to `/api/files/resolve-image` URLs.
+ * The server-side endpoint walks upward from the markdown file's directory
+ * toward the working directory to find the actual image file, which handles
+ * common documentation layouts where assets live in a parent directory.
+ */
+function resolveMarkdownImages(markdown: string, mdFilePath: string, workingDirectory: string): string {
+  // ![alt](src) or ![alt](src "title")  — skip absolute URLs and data/blob URIs
+  return markdown.replace(
+    /!\[([^\]]*)\]\((?!https?:\/\/|data:|blob:)([^)"\s]+)([^)]*)\)/g,
+    (_match, alt, src, rest) => {
+      const apiUrl = `/api/files/resolve-image?src=${encodeURIComponent(src)}&mdFile=${encodeURIComponent(mdFilePath)}&workDir=${encodeURIComponent(workingDirectory)}`;
+      return `![${alt}](${apiUrl}${rest})`;
+    },
+  );
+}
+
 /** Rendered view for markdown / HTML files */
 function RenderedView({
   content,
   filePath,
+  workingDirectory,
 }: {
   content: string;
   filePath: string;
+  workingDirectory: string;
 }) {
   const { t } = useTranslation();
   if (isHtml(filePath)) {
@@ -487,13 +506,15 @@ function RenderedView({
 
   // Markdown / MDX — strip YAML frontmatter before rendering
   const body = content.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, "");
+  // Resolve relative image paths to API URLs so they render correctly
+  const resolved = resolveMarkdownImages(body, filePath, workingDirectory);
   return (
     <div className="px-6 py-4 overflow-x-hidden break-words">
       <Streamdown
         className="size-full [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&_ul]:pl-6 [&_ol]:pl-6"
         plugins={streamdownPlugins}
       >
-        {body}
+        {resolved}
       </Streamdown>
     </div>
   );
