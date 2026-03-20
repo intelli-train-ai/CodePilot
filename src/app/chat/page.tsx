@@ -7,7 +7,6 @@ import { MessageList } from '@/components/chat/MessageList';
 import { MessageInput } from '@/components/chat/MessageInput';
 import { ChatComposerActionBar } from '@/components/chat/ChatComposerActionBar';
 import { ChatPermissionSelector } from '@/components/chat/ChatPermissionSelector';
-import { ImageGenToggle } from '@/components/chat/ImageGenToggle';
 import { PermissionPrompt } from '@/components/chat/PermissionPrompt';
 import { ChatEmptyState } from '@/components/chat/ChatEmptyState';
 import { ErrorBanner } from '@/components/ui/error-banner';
@@ -676,7 +675,7 @@ export default function NewChatPage() {
         onEffortChange={setSelectedEffort}
       />
       <ChatComposerActionBar
-        left={<ImageGenToggle />}
+        left={null}
         center={
           <ChatPermissionSelector
             permissionProfile={permissionProfile}

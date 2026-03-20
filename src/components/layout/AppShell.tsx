@@ -13,8 +13,6 @@ import { PanelZone } from "./PanelZone";
 import { PanelContext, type PreviewViewMode } from "@/hooks/usePanel";
 import { UpdateContext } from "@/hooks/useUpdate";
 import { useUpdateChecker } from "@/hooks/useUpdateChecker";
-import { ImageGenContext, useImageGenState } from "@/hooks/useImageGen";
-import { BatchImageGenContext, useBatchImageGenState } from "@/hooks/useBatchImageGen";
 import { SplitContext, type SplitSession } from "@/hooks/useSplit";
 import { SplitChatContainer } from "./SplitChatContainer";
 import { ErrorBoundary } from "./ErrorBoundary";
@@ -405,9 +403,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     [fileTreeOpen, gitPanelOpen, previewOpen, terminalOpen, currentBranch, gitDirtyCount, currentWorktreeLabel, workingDirectory, sessionId, sessionTitle, streamingSessionId, pendingApprovalSessionId, activeStreamingSessions, pendingApprovalSessionIds, previewFile, setPreviewFile, previewViewMode]
   );
 
-  const imageGenValue = useImageGenState();
-  const batchImageGenValue = useBatchImageGenState();
-
   // Share/replay routes render without chrome (no nav rail, no panels)
   const isShareRoute = pathname.startsWith("/share/");
   if (isShareRoute) {
@@ -425,8 +420,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <UpdateContext.Provider value={updateContextValue}>
       <PanelContext.Provider value={panelContextValue}>
         <SplitContext.Provider value={splitContextValue}>
-        <ImageGenContext.Provider value={imageGenValue}>
-        <BatchImageGenContext.Provider value={batchImageGenValue}>
         <TooltipProvider delayDuration={300}>
           <div className="flex h-screen overflow-hidden">
             <NavRail
@@ -468,8 +461,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             />
           )}
         </TooltipProvider>
-        </BatchImageGenContext.Provider>
-        </ImageGenContext.Provider>
         </SplitContext.Provider>
       </PanelContext.Provider>
     </UpdateContext.Provider>
