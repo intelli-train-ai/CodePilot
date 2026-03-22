@@ -20,6 +20,7 @@ import { registerConversation, unregisterConversation } from './conversation-reg
 import { captureCapabilities, setCachedPlugins } from './agent-sdk-capabilities';
 import { getSetting, updateSdkSessionId, createPermissionRequest } from './db';
 import { resolveForClaudeCode, toClaudeCodeEnv } from './provider-resolver';
+import { findPresetForLegacy } from './provider-catalog';
 import { findClaudeBinary, findGitBash, getExpandedPath, invalidateClaudePathCache } from './platform';
 import { notifyPermissionRequest, notifyGeneric } from './telegram-bot';
 import { classifyError, formatClassifiedError } from './error-classifier';
@@ -375,6 +376,7 @@ export function streamClaude(options: ClaudeStreamOptions): ReadableStream<strin
     sessionId,
     sdkSessionId,
     model,
+    modelDisplayName,
     systemPrompt,
     workingDirectory,
     mcpServers,
@@ -406,6 +408,7 @@ export function streamClaude(options: ClaudeStreamOptions): ReadableStream<strin
       const resolved = resolveForClaudeCode(options.provider, {
         providerId: options.providerId,
         sessionProviderId: options.sessionProviderId,
+        model: options.model,
       });
 
       try {
@@ -459,10 +462,9 @@ export function streamClaude(options: ClaudeStreamOptions): ReadableStream<strin
             : ((permissionMode as Options['permissionMode']) || 'acceptEdits'),
           env: sanitizeEnv(sdkEnv),
           // Load settings so the SDK behaves like the CLI (tool permissions,
-          // CLAUDE.md, etc.). When an active provider is configured in
-          // CodePilot, skip 'user' settings because ~/.claude/settings.json
-          // may contain env overrides (ANTHROPIC_BASE_URL, ANTHROPIC_MODEL,
-          // etc.) that would conflict with the provider's configuration.
+          // CLAUDE.md, etc.). When an active provider has credentials,
+          // settingSources excludes 'user' to prevent ~/.claude/settings.json
+          // env overrides from replacing the provider's injected credentials.
           settingSources: resolved.settingSources as Options['settingSources'],
         };
 
@@ -539,8 +541,20 @@ export function streamClaude(options: ClaudeStreamOptions): ReadableStream<strin
         }
 
         // Pass through SDK-specific options from ClaudeStreamOptions
-        if (thinking) {
-          queryOptions.thinking = thinking;
+        // For sdkProxyOnly providers (MiniMax, Kimi, GLM, etc.) that always return
+        // thinking blocks in responses, we must enable thinking in the request so
+        // the CLI expects and correctly parses them. Without this, the CLI crashes
+        // with exit code 1 upon receiving unexpected thinking content blocks.
+        const preset = resolved.provider
+          ? findPresetForLegacy(resolved.provider.base_url, resolved.provider.provider_type)
+          : undefined;
+        if (preset?.sdkProxyOnly) {
+          queryOptions.thinking = { type: 'enabled', budgetTokens: 10000 };
+          console.log('[claude-client] sdkProxyOnly provider detected, enabled thinking for compatibility', {
+            provider: resolved.provider?.name,
+            preset: preset.key,
+            thinking: queryOptions.thinking,
+          });
         }
         if (effort) {
           queryOptions.effort = effort;
@@ -955,6 +969,7 @@ export function streamClaude(options: ClaudeStreamOptions): ReadableStream<strin
                       session_id: sysMsg.session_id,
                       model: sysMsg.model,
                       requested_model: model,
+                      display_model: modelDisplayName || model,
                       tools: sysMsg.tools,
                       slash_commands: initMsg.slash_commands,
                       skills: initMsg.skills,
