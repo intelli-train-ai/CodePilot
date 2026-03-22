@@ -48,6 +48,10 @@ export function ModelSelectorDropdown({
 
   const currentModelOption = modelOptions.find((m) => m.value === currentModelValue) || modelOptions[0];
 
+  // Avoid hydration mismatch: model value comes from localStorage on client
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+
   // Click outside to close model menu
   useEffect(() => {
     if (!modelMenuOpen) return;
@@ -83,12 +87,12 @@ export function ModelSelectorDropdown({
       <PromptInputButton
         onClick={() => setModelMenuOpen((prev) => !prev)}
       >
-        <span className="text-xs font-mono">{currentModelOption?.label}</span>
+        <span className="text-xs font-mono">{mounted ? currentModelOption?.label : '\u00A0'}</span>
         <CaretDown size={10} className={cn("transition-transform duration-200", modelMenuOpen && "rotate-180")} />
       </PromptInputButton>
 
       {modelMenuOpen && (
-        <CommandList className="w-64 mb-1.5">
+        <CommandList className="min-w-64 w-max mb-1.5">
           <CommandListSearch
             placeholder={t('composer.searchModels' as TranslationKey)}
             value={modelSearch}
@@ -118,7 +122,7 @@ export function ModelSelectorDropdown({
                         onClick={() => handleModelSelect(group.provider_id, opt.value)}
                         className="justify-between"
                       >
-                        <span className="font-mono text-xs">{opt.label}</span>
+                        <span className="text-xs whitespace-nowrap">{opt.label}</span>
                         {isActive && <span className="text-xs">&#10003;</span>}
                       </CommandListItem>
                     );
