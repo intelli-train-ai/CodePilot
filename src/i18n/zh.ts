@@ -181,6 +181,15 @@ const zh: Record<TranslationKey, string> = {
   'fileTree.refresh': '刷新',
   'fileTree.noFiles': '未找到文件',
   'fileTree.selectFolder': '选择项目文件夹以查看文件',
+  'fileTree.dropHint': '拖拽文件到此处上传',
+  'fileTree.dropActive': '释放以上传',
+  'fileTree.uploading': '上传中...',
+  'fileTree.uploadSuccess': '已上传 {count} 个文件',
+  'fileTree.archiveExtracted': '压缩包已解压',
+  'fileTree.deleteConfirmTitle': '删除',
+  'fileTree.deleteConfirmFile': '确定要删除 "{name}" 吗？',
+  'fileTree.deleteConfirmFolder': '确定要删除文件夹 "{name}" 及其所有内容吗？',
+  'fileTree.delete': '删除',
 
   // ── File preview ────────────────────────────────────────────
   'filePreview.backToTree': '返回文件树',
@@ -267,6 +276,9 @@ const zh: Record<TranslationKey, string> = {
   'folderPicker.noSubdirs': '无子目录',
   'folderPicker.cancel': '取消',
   'folderPicker.select': '选择此文件夹',
+  'folderPicker.newFolder': '新建文件夹',
+  'folderPicker.newFolderPlaceholder': '文件夹名称',
+  'folderPicker.folderExists': '文件夹已存在',
 
   // ── Import session dialog ───────────────────────────────────
   'import.title': '从 Claude CLI 导入会话',

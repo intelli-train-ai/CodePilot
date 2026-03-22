@@ -1,9 +1,19 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
-import { ArrowsClockwise, MagnifyingGlass, FileCode, Code, File } from "@/components/ui/icon";
+import { useState, useEffect, useCallback, useRef, type DragEvent } from "react";
+import { ArrowsClockwise, MagnifyingGlass, FileCode, Code, File, UploadSimple } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import type { FileTreeNode } from "@/types";
 import {
@@ -167,7 +177,12 @@ export function FileTree({ workingDirectory, onFileSelect, onFileAdd }: FileTree
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [dragOver, setDragOver] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadMsg, setUploadMsg] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ path: string; isDirectory: boolean } | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const dragCounterRef = useRef(0);
   const { t } = useTranslation();
 
   const fetchTree = useCallback(async () => {
@@ -253,11 +268,101 @@ export function FileTree({ workingDirectory, onFileSelect, onFileAdd }: FileTree
     });
   }, []);
 
+  const handleDeleteRequest = useCallback((filePath: string, isDirectory: boolean) => {
+    setDeleteTarget({ path: filePath, isDirectory });
+  }, []);
+
+  const handleDeleteConfirm = useCallback(async () => {
+    if (!deleteTarget || !workingDirectory) return;
+    try {
+      const res = await fetch('/api/files', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filePath: deleteTarget.path, baseDir: workingDirectory }),
+      });
+      if (res.ok) {
+        fetchTree();
+      }
+    } catch {
+      // silently fail
+    } finally {
+      setDeleteTarget(null);
+    }
+  }, [deleteTarget, workingDirectory, fetchTree]);
+
+  const handleUpload = useCallback(async (files: FileList) => {
+    if (!workingDirectory || files.length === 0) return;
+    setUploading(true);
+    setUploadMsg(null);
+    try {
+      const formData = new FormData();
+      formData.append('dir', workingDirectory);
+      for (let i = 0; i < files.length; i++) {
+        formData.append('files', files[i]);
+      }
+      const res = await fetch('/api/files/upload', { method: 'POST', body: formData });
+      if (res.ok) {
+        const data = await res.json();
+        const hasExtracted = data.files?.some((f: { extracted?: boolean }) => f.extracted);
+        setUploadMsg(
+          hasExtracted
+            ? t('fileTree.archiveExtracted')
+            : t('fileTree.uploadSuccess').replace('{count}', String(data.files?.length ?? files.length))
+        );
+        fetchTree();
+        setTimeout(() => setUploadMsg(null), 3000);
+      }
+    } catch {
+      // silently fail
+    } finally {
+      setUploading(false);
+    }
+  }, [workingDirectory, fetchTree, t]);
+
+  const handleDragEnter = useCallback((e: DragEvent) => {
+    e.preventDefault();
+    dragCounterRef.current++;
+    if (dragCounterRef.current === 1) setDragOver(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: DragEvent) => {
+    e.preventDefault();
+    dragCounterRef.current--;
+    if (dragCounterRef.current === 0) setDragOver(false);
+  }, []);
+
+  const handleDragOver = useCallback((e: DragEvent) => {
+    e.preventDefault();
+  }, []);
+
+  const handleDrop = useCallback((e: DragEvent) => {
+    e.preventDefault();
+    dragCounterRef.current = 0;
+    setDragOver(false);
+    if (e.dataTransfer.files.length > 0) {
+      handleUpload(e.dataTransfer.files);
+    }
+  }, [handleUpload]);
+
   // Default to all directories collapsed
   const defaultExpanded = new Set<string>();
 
   return (
-    <div className="flex flex-col h-full min-h-0">
+    <div
+      className="flex flex-col h-full min-h-0 relative"
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+    >
+      {/* Drag overlay */}
+      {dragOver && workingDirectory && (
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-primary/5 border-2 border-dashed border-primary rounded-md pointer-events-none">
+          <UploadSimple size={32} className="text-primary mb-2" />
+          <span className="text-sm font-medium text-primary">{t('fileTree.dropActive')}</span>
+        </div>
+      )}
+
       {/* Search + Refresh */}
       <div className="flex items-center gap-1.5 px-4 py-2 shrink-0">
         <div className="relative flex-1 min-w-0">
@@ -297,12 +402,52 @@ export function FileTree({ workingDirectory, onFileSelect, onFileAdd }: FileTree
             // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AI Elements FileTree onSelect type conflicts with HTMLAttributes.onSelect
             onSelect={onFileSelect as any}
             onAdd={onFileAdd}
+            onDelete={handleDeleteRequest}
             className="border-0 rounded-none"
           >
             <RenderTreeNodes nodes={tree} searchQuery={searchQuery} workingDirectory={workingDirectory} onLazyLoad={handleLazyLoad} />
           </AIFileTree>
         )}
       </div>
+
+      {/* Drop hint / upload status */}
+      {workingDirectory && (
+        <div className="shrink-0 border-t border-border/40 px-3 py-2">
+          {uploading ? (
+            <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+              <ArrowsClockwise size={12} className="animate-spin" />
+              <span>{t('fileTree.uploading')}</span>
+            </div>
+          ) : uploadMsg ? (
+            <p className="text-center text-xs text-primary">{uploadMsg}</p>
+          ) : (
+            <p className="text-center text-xs text-muted-foreground">{t('fileTree.dropHint')}</p>
+          )}
+        </div>
+      )}
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('fileTree.deleteConfirmTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteTarget?.isDirectory
+                ? t('fileTree.deleteConfirmFolder').replace('{name}', deleteTarget?.path.split('/').pop() || '')
+                : t('fileTree.deleteConfirmFile').replace('{name}', deleteTarget?.path.split('/').pop() || '')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {t('fileTree.delete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

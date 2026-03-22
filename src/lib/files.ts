@@ -13,6 +13,7 @@ const IGNORED_DIRS = new Set([
   'coverage',
   '.output',
   'build',
+  '__MACOSX',
 ]);
 
 const LANGUAGE_MAP: Record<string, string> = {

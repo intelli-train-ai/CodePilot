@@ -39,6 +39,8 @@ export {
   FileZip,
   Folder,
   FolderOpen,
+  FolderPlus,
+  UploadSimple,
   Funnel,
   GameController,
   Gear,

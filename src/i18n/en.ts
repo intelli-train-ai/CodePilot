@@ -184,6 +184,15 @@ const en = {
   'fileTree.refresh': 'Refresh',
   'fileTree.noFiles': 'No files found',
   'fileTree.selectFolder': 'Select a project folder to view files',
+  'fileTree.dropHint': 'Drop files here to upload',
+  'fileTree.dropActive': 'Drop to upload',
+  'fileTree.uploading': 'Uploading...',
+  'fileTree.uploadSuccess': '{count} file(s) uploaded',
+  'fileTree.archiveExtracted': 'Archive extracted',
+  'fileTree.deleteConfirmTitle': 'Delete',
+  'fileTree.deleteConfirmFile': 'Are you sure you want to delete "{name}"?',
+  'fileTree.deleteConfirmFolder': 'Are you sure you want to delete folder "{name}" and all its contents?',
+  'fileTree.delete': 'Delete',
 
   // ── File preview ────────────────────────────────────────────
   'filePreview.backToTree': 'Back to file tree',
@@ -270,6 +279,9 @@ const en = {
   'folderPicker.noSubdirs': 'No subdirectories',
   'folderPicker.cancel': 'Cancel',
   'folderPicker.select': 'Select This Folder',
+  'folderPicker.newFolder': 'New Folder',
+  'folderPicker.newFolderPlaceholder': 'Folder name',
+  'folderPicker.folderExists': 'Folder already exists',
 
   // ── Import session dialog ───────────────────────────────────
   'import.title': 'Import Session from Claude CLI',
