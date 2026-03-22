@@ -5,6 +5,18 @@ import os from 'os';
 import { scanDirectory, isPathSafe, isRootPath } from '@/lib/files';
 import type { FileTreeResponse, ErrorResponse } from '@/types';
 
+/** Writable text-based extensions (markdown, plain text, config, code, etc.) */
+const WRITABLE_TEXT_EXTENSIONS = new Set([
+  '.md', '.mdx', '.txt', '.text', '.markdown',
+  '.json', '.yaml', '.yml', '.toml', '.ini', '.cfg', '.conf',
+  '.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs',
+  '.py', '.rb', '.rs', '.go', '.java', '.kt', '.swift', '.c', '.cpp', '.h', '.hpp',
+  '.css', '.scss', '.less', '.html', '.htm', '.xml', '.svg',
+  '.sh', '.bash', '.zsh', '.fish', '.ps1', '.bat', '.cmd',
+  '.env', '.gitignore', '.dockerignore', '.editorconfig',
+  '.csv', '.tsv', '.log', '.sql',
+]);
+
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
   const dir = searchParams.get('dir');
@@ -58,6 +70,62 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     return NextResponse.json<ErrorResponse>(
       { error: error instanceof Error ? error.message : 'Failed to scan directory' },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * Write / update a text file.
+ * Requires `filePath`, `baseDir`, and `content`.
+ * Only allows writing to known text-based file extensions to prevent
+ * accidental binary corruption.
+ */
+export async function PUT(request: NextRequest) {
+  try {
+    const { filePath, baseDir, content } = await request.json();
+
+    if (!filePath || !baseDir || typeof content !== 'string') {
+      return NextResponse.json<ErrorResponse>(
+        { error: 'Missing filePath, baseDir, or content' },
+        { status: 400 }
+      );
+    }
+
+    const resolvedPath = path.resolve(filePath);
+    const resolvedBase = path.resolve(baseDir);
+
+    if (isRootPath(resolvedBase)) {
+      return NextResponse.json<ErrorResponse>(
+        { error: 'Cannot use filesystem root as base directory' },
+        { status: 403 }
+      );
+    }
+
+    if (!isPathSafe(resolvedBase, resolvedPath)) {
+      return NextResponse.json<ErrorResponse>(
+        { error: 'Path is outside the project scope' },
+        { status: 403 }
+      );
+    }
+
+    // Only allow writing to text-based files
+    const ext = path.extname(resolvedPath).toLowerCase();
+    if (!WRITABLE_TEXT_EXTENSIONS.has(ext)) {
+      return NextResponse.json<ErrorResponse>(
+        { error: `File type "${ext}" is not supported for editing` },
+        { status: 400 }
+      );
+    }
+
+    // Ensure parent directory exists
+    await fs.mkdir(path.dirname(resolvedPath), { recursive: true });
+    await fs.writeFile(resolvedPath, content, 'utf-8');
+
+    return NextResponse.json({ saved: resolvedPath });
+  } catch (e) {
+    return NextResponse.json<ErrorResponse>(
+      { error: e instanceof Error ? e.message : 'Failed to save file' },
       { status: 500 }
     );
   }
