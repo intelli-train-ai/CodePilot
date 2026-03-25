@@ -19,7 +19,9 @@ import { ErrorBoundary } from "./ErrorBoundary";
 import { getActiveSessionIds, getSnapshot } from "@/lib/stream-session-manager";
 import { useGitStatus } from "@/hooks/useGitStatus";
 import { SetupCenter } from '@/components/setup/SetupCenter';
+import { TokenGate, getStoredAuthToken, clearStoredAuthToken } from '@/components/auth/TokenGate';
 import { Toaster } from '@/components/ui/toast';
+import { authFetch } from '@/lib/api-client';
 
 const SPLIT_SESSIONS_KEY = "codepilot:split-sessions";
 const SPLIT_ACTIVE_COLUMN_KEY = "codepilot:split-active-column";
@@ -72,9 +74,72 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [setupOpen, setSetupOpen] = useState(false);
   const [setupInitialCard, setSetupInitialCard] = useState<'claude' | 'provider' | 'project' | undefined>();
 
+  // --- Auth gate state ---
+  const [authChecked, setAuthChecked] = useState(false);
+  const [authRequired, setAuthRequired] = useState(false);
+  const [authVerified, setAuthVerified] = useState(false);
+
+  // Check auth status on mount
+  useEffect(() => {
+    const storedToken = getStoredAuthToken();
+    const headers: Record<string, string> = {};
+    if (storedToken) {
+      headers['Authorization'] = `Bearer ${storedToken}`;
+    }
+    fetch('/api/auth/status', { headers })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data) {
+          if (!data.enabled) {
+            // Auth not enabled — pass through
+            setAuthRequired(false);
+            setAuthVerified(true);
+          } else if (data.authenticated) {
+            // Token in localStorage is valid
+            setAuthRequired(true);
+            setAuthVerified(true);
+          } else {
+            // Auth enabled but not authenticated
+            setAuthRequired(true);
+            setAuthVerified(false);
+          }
+        } else {
+          // Could not reach auth endpoint — allow through
+          setAuthVerified(true);
+        }
+        setAuthChecked(true);
+      })
+      .catch(() => {
+        setAuthChecked(true);
+        setAuthVerified(true);
+      });
+  }, []);
+
+  // Listen for auth-required events (triggered by 401 from authFetch)
+  useEffect(() => {
+    const handler = () => {
+      setAuthVerified(false);
+      setAuthRequired(true);
+    };
+    window.addEventListener('codepilot:auth-required', handler);
+    return () => window.removeEventListener('codepilot:auth-required', handler);
+  }, []);
+
+  const handleAuthenticated = useCallback((token: string) => {
+    void token; // token is already stored by TokenGate
+    setAuthVerified(true);
+  }, []);
+
+  const handleLogout = useCallback(() => {
+    clearStoredAuthToken();
+    setAuthVerified(false);
+  }, []);
+  void handleLogout; // will be used by settings
+
   // Check if setup is needed
   useEffect(() => {
-    fetch('/api/setup')
+    if (!authChecked || (authRequired && !authVerified)) return;
+    authFetch('/api/setup')
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         if (data && !data.completed) {
@@ -82,7 +147,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         }
       })
       .catch(() => {});
-  }, []);
+  }, [authChecked, authRequired, authVerified]);
 
   // Listen for open-setup-center events
   useEffect(() => {
@@ -346,7 +411,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     let cancelled = false;
     const doFetch = async () => {
       try {
-        const res = await fetch("/api/settings/app");
+        const res = await authFetch("/api/settings/app");
         if (res.ok && !cancelled) {
           const data = await res.json();
           setSkipPermissionsActive(data.settings?.dangerously_skip_permissions === "true");
@@ -414,6 +479,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <Toaster />
       </TooltipProvider>
     );
+  }
+
+  // Auth gate: block rendering until auth check completes
+  if (!authChecked) {
+    return <div className="flex h-screen items-center justify-center bg-background" />;
+  }
+  if (authRequired && !authVerified) {
+    return <TokenGate onAuthenticated={handleAuthenticated} />;
   }
 
   return (

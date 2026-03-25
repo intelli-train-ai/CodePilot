@@ -4,6 +4,7 @@ import path from 'path';
 import os from 'os';
 import { scanDirectory, isPathSafe, isRootPath } from '@/lib/files';
 import type { FileTreeResponse, ErrorResponse } from '@/types';
+import { requireAuth } from '@/lib/auth';
 
 /** Writable text-based extensions (markdown, plain text, config, code, etc.) */
 const WRITABLE_TEXT_EXTENSIONS = new Set([
@@ -18,6 +19,9 @@ const WRITABLE_TEXT_EXTENSIONS = new Set([
 ]);
 
 export async function GET(request: NextRequest) {
+  const authError = requireAuth(request);
+  if (authError) return authError;
+
   const { searchParams } = request.nextUrl;
   const dir = searchParams.get('dir');
   const depth = parseInt(searchParams.get('depth') || '3', 10);

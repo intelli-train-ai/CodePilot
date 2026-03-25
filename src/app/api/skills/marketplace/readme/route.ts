@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 import os from "os";
+import { requireAuth } from '@/lib/auth';
 
 // Local cache directory (same as search route)
 const CACHE_DIR = path.join(os.tmpdir(), "codepilot-skills-cache");
@@ -35,6 +36,9 @@ function findSkillMd(skillId: string): string | null {
 }
 
 export async function GET(request: NextRequest) {
+  const authError = requireAuth(request);
+  if (authError) return authError;
+
   try {
     const skillId = request.nextUrl.searchParams.get("skillId") || "";
 

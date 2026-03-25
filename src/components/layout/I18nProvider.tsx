@@ -2,6 +2,7 @@
 
 import { createContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 import { type Locale, type TranslationKey, translate } from '@/i18n';
+import { authFetch } from '@/lib/api-client';
 
 interface I18nContextValue {
   locale: Locale;
@@ -22,7 +23,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     async function loadLocale() {
       try {
-        const res = await fetch('/api/settings/app');
+        const res = await authFetch('/api/settings/app');
         if (res.ok) {
           const data = await res.json();
           const saved = data.settings?.locale;
@@ -40,7 +41,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   const setLocale = useCallback((newLocale: Locale) => {
     setLocaleState(newLocale);
     // Persist to app settings
-    fetch('/api/settings/app', {
+    authFetch('/api/settings/app', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ settings: { locale: newLocale } }),

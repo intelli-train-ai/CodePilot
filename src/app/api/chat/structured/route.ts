@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@anthropic-ai/claude-agent-sdk';
 import type { Options, SDKResultSuccess } from '@anthropic-ai/claude-agent-sdk';
+import { requireAuth } from '@/lib/auth';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
+  const authError = requireAuth(request);
+  if (authError) return authError;
+
   try {
     const body = await request.json();
     const { prompt, outputFormat, options } = body;

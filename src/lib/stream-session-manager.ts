@@ -21,6 +21,7 @@ import type {
   PermissionRequestEvent,
   FileAttachment,
 } from '@/types';
+import { authFetch } from '@/lib/api-client';
 
 // ==========================================
 // Internal types
@@ -227,7 +228,7 @@ async function runStream(stream: ActiveStream, params: StartStreamParams): Promi
   }
 
   try {
-    const response = await fetch('/api/chat', {
+    const response = await authFetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -429,7 +430,7 @@ async function runStream(stream: ActiveStream, params: StartStreamParams): Promi
         stream.toolOutputAccumulated = '';
         emit(stream, 'completed');
         // Clear stale SDK session so next message starts fresh
-        fetch(`/api/chat/sessions/${encodeURIComponent(stream.sessionId)}`, {
+        authFetch(`/api/chat/sessions/${encodeURIComponent(stream.sessionId)}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ sdk_session_id: '' }),
@@ -521,7 +522,7 @@ export function stopStream(sessionId: string): void {
   const stream = getStreamsMap().get(sessionId);
   if (stream && stream.snapshot.phase === 'active') {
     // Try graceful interrupt first, fallback to abort
-    fetch('/api/chat/interrupt', {
+    authFetch('/api/chat/interrupt', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ sessionId }),
@@ -627,7 +628,7 @@ export async function respondToPermission(
   emit(stream, 'snapshot-updated');
 
   try {
-    await fetch('/api/chat/permission', {
+    await authFetch('/api/chat/permission', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),

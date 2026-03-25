@@ -5,6 +5,7 @@ import { execSync } from "child_process";
 import fs from "fs";
 import path from "path";
 import os from "os";
+import { requireAuth } from '@/lib/auth';
 
 // GitHub repo to use as skill marketplace
 const SKILLS_REPO = "intelli-train-ai/skills";
@@ -86,6 +87,9 @@ function scanSkillsFromLocal(): MarketplaceSkill[] {
 }
 
 export async function GET(request: NextRequest) {
+  const authError = requireAuth(request);
+  if (authError) return authError;
+
   try {
     const q = (request.nextUrl.searchParams.get("q") || "").toLowerCase().trim();
 

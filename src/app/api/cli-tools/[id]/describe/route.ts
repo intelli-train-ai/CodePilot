@@ -1,6 +1,7 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { CLI_TOOLS_CATALOG, EXTRA_WELL_KNOWN_BINS } from '@/lib/cli-tools-catalog';
 import { generateTextViaSdk } from '@/lib/claude-client';
+import { requireAuth } from '@/lib/auth';
 
 /**
  * Try to extract a JSON object from text that may be wrapped in markdown code blocks
@@ -28,9 +29,12 @@ function extractJson(raw: string): Record<string, string> {
 }
 
 export async function POST(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const authError = requireAuth(request);
+  if (authError) return authError;
+
   const { id } = await params;
 
   // Look up in catalog first, then in extra well-known list

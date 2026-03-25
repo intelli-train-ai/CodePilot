@@ -3,6 +3,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
 import type { ErrorResponse } from '@/types';
+import { requireAuth } from '@/lib/auth';
 
 async function getWindowsDrives(): Promise<string[]> {
   if (process.platform !== 'win32') return [];
@@ -63,6 +64,9 @@ export async function POST(request: NextRequest) {
 
 // List only directories for folder browsing (no safety restriction since user is choosing where to work)
 export async function GET(request: NextRequest) {
+  const authError = requireAuth(request);
+  if (authError) return authError;
+
   const { searchParams } = request.nextUrl;
   const dir = searchParams.get('dir') || os.homedir();
 

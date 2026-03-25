@@ -22,6 +22,7 @@ import {
   Stethoscope,
 } from "@/components/ui/icon";
 import { useTranslation } from "@/hooks/useTranslation";
+import { authFetch } from '@/lib/api-client';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -169,7 +170,7 @@ export function ProviderDoctorDialog({ open, onOpenChange }: ProviderDoctorDialo
     setLiveProbeRunning(false);
     try {
       // Fast probes first (~1s) — renders immediately
-      const res = await fetch("/api/doctor");
+      const res = await authFetch("/api/doctor");
       if (!res.ok) throw new Error("Diagnostic request failed");
       if (runId !== diagnosticRunRef.current) return; // stale
       const raw = await res.json();
@@ -186,7 +187,7 @@ export function ProviderDoctorDialog({ open, onOpenChange }: ProviderDoctorDialo
 
       // Live probe runs separately (up to 15s) — appends when done
       setLiveProbeRunning(true);
-      fetch("/api/doctor?live=true")
+      authFetch("/api/doctor?live=true")
         .then((r) => r.ok ? r.json() : null)
         .then((liveRaw) => {
           // Discard if a newer run started while we were waiting
@@ -241,7 +242,7 @@ export function ProviderDoctorDialog({ open, onOpenChange }: ProviderDoctorDialo
     const key = finding.repair.action;
     setRepairingActions((prev) => new Set(prev).add(key));
     try {
-      const res = await fetch("/api/doctor/repair", {
+      const res = await authFetch("/api/doctor/repair", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -268,7 +269,7 @@ export function ProviderDoctorDialog({ open, onOpenChange }: ProviderDoctorDialo
 
   const handleExport = async () => {
     try {
-      const res = await fetch("/api/doctor/export");
+      const res = await authFetch("/api/doctor/export");
       if (!res.ok) throw new Error("Export failed");
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
