@@ -208,6 +208,10 @@ const en = {
 
   // ── Doc preview ─────────────────────────────────────────────
   'docPreview.htmlPreview': 'HTML Preview',
+  'docPreview.edit': 'Edit',
+  'docPreview.saving': 'Saving…',
+  'docPreview.saved': 'Saved',
+  'docPreview.saveFailed': 'Save failed',
 
   // ── Extensions page ─────────────────────────────────────────
   'extensions.title': 'Extensions',

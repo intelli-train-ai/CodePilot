@@ -205,6 +205,10 @@ const zh: Record<TranslationKey, string> = {
 
   // ── Doc preview ─────────────────────────────────────────────
   'docPreview.htmlPreview': 'HTML 预览',
+  'docPreview.edit': '编辑',
+  'docPreview.saving': '保存中…',
+  'docPreview.saved': '已保存',
+  'docPreview.saveFailed': '保存失败',
 
   // ── Extensions page ─────────────────────────────────────────
   'extensions.title': '扩展',

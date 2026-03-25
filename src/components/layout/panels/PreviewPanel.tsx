@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useTheme } from "next-themes";
 import { X, Copy, Check, SpinnerGap } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
@@ -14,15 +14,29 @@ import { math } from "@streamdown/math";
 import { mermaid } from "@streamdown/mermaid";
 import { usePanel } from "@/hooks/usePanel";
 import { useTranslation } from "@/hooks/useTranslation";
+import { useAutoSave } from "@/hooks/useAutoSave";
+import type { SaveStatus } from "@/hooks/useAutoSave";
 import { ResizeHandle } from "@/components/layout/ResizeHandle";
 import type { FilePreview as FilePreviewType } from "@/types";
 
 const streamdownPlugins = { cjk, code, math, mermaid };
 
-type ViewMode = "source" | "rendered";
+type ViewMode = "source" | "rendered" | "edit";
 
 /** Extensions that support a rendered preview */
 const RENDERABLE_EXTENSIONS = new Set([".md", ".mdx", ".html", ".htm"]);
+
+/** Extensions that support in-app editing */
+const EDITABLE_EXTENSIONS = new Set([
+  ".md", ".mdx", ".txt", ".text", ".markdown",
+  ".json", ".yaml", ".yml", ".toml", ".ini", ".cfg", ".conf",
+  ".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs",
+  ".py", ".rb", ".rs", ".go", ".java", ".kt", ".swift", ".c", ".cpp", ".h", ".hpp",
+  ".css", ".scss", ".less", ".html", ".htm", ".xml", ".svg",
+  ".sh", ".bash", ".zsh", ".fish", ".ps1", ".bat", ".cmd",
+  ".env", ".gitignore", ".dockerignore", ".editorconfig",
+  ".csv", ".tsv", ".log", ".sql",
+]);
 
 /** Image extensions */
 const IMAGE_EXTENSIONS = new Set([".png", ".jpg", ".jpeg", ".gif", ".bmp", ".ico", ".webp", ".svg", ".avif"]);
@@ -59,6 +73,10 @@ function isHtml(filePath: string): boolean {
   return ext === ".html" || ext === ".htm";
 }
 
+function isEditable(filePath: string): boolean {
+  return EDITABLE_EXTENSIONS.has(getExtension(filePath));
+}
+
 const PREVIEW_MIN_WIDTH = 320;
 const PREVIEW_MAX_WIDTH = 800;
 const PREVIEW_DEFAULT_WIDTH = 480;
@@ -72,6 +90,8 @@ export function PreviewPanel() {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [width, setWidth] = useState(PREVIEW_DEFAULT_WIDTH);
+  /** Full file content for editing (loaded without line limit) */
+  const [fullContent, setFullContent] = useState<string | null>(null);
 
   const handleResize = useCallback((delta: number) => {
     // Left-side handle: dragging left (negative delta) = wider
@@ -82,7 +102,38 @@ export function PreviewPanel() {
   const imageFile = isImage(filePath);
   const pdfFile = isPdf(filePath);
   const officeFile = isOffice(filePath);
+  const editable = isEditable(filePath);
   const [officeHtml, setOfficeHtml] = useState<string | null>(null);
+
+  // Load full content when entering edit mode
+  useEffect(() => {
+    if (previewViewMode !== "edit" || !filePath || !editable) {
+      setFullContent(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(
+          `/api/files/preview?path=${encodeURIComponent(filePath)}&maxLines=100000${workingDirectory ? `&baseDir=${encodeURIComponent(workingDirectory)}` : ''}`
+        );
+        if (!res.ok) throw new Error("Failed to load file for editing");
+        const data = await res.json();
+        if (!cancelled) setFullContent(data.preview.content);
+      } catch {
+        if (!cancelled) setFullContent(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [filePath, workingDirectory, previewViewMode, editable]);
+
+  // Reset edit mode when switching files
+  useEffect(() => {
+    if (previewViewMode === "edit") {
+      setFullContent(null);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filePath]);
 
   useEffect(() => {
     if (!filePath || imageFile || pdfFile) return;
@@ -183,11 +234,11 @@ export function PreviewPanel() {
           <p className="truncate text-sm font-medium">{fileName}</p>
         </div>
 
-        {!imageFile && !pdfFile && !officeFile && canRender && (
-          <ViewModeToggle value={previewViewMode} onChange={setPreviewViewMode} />
+        {!imageFile && !pdfFile && !officeFile && (canRender || editable) && (
+          <ViewModeToggle value={previewViewMode} onChange={setPreviewViewMode} canRender={canRender} canEdit={editable} />
         )}
 
-        {!imageFile && !pdfFile && !officeFile && (
+        {!imageFile && !pdfFile && !officeFile && previewViewMode !== "edit" && (
           <Button variant="ghost" size="icon-sm" onClick={handleCopyContent}>
             {copied ? (
               <Check size={14} className="text-status-success-foreground" />
@@ -246,6 +297,25 @@ export function PreviewPanel() {
           <div className="px-4 py-8 text-center">
             <p className="text-sm text-destructive">{error}</p>
           </div>
+        ) : previewViewMode === "edit" && editable ? (
+          fullContent !== null ? (
+            <EditView
+              filePath={filePath}
+              baseDir={workingDirectory}
+              initialContent={fullContent}
+              onSaved={() => {
+                // Reload preview content after save so switching back shows fresh data
+                fetch(`/api/files/preview?path=${encodeURIComponent(filePath)}&maxLines=500${workingDirectory ? `&baseDir=${encodeURIComponent(workingDirectory)}` : ''}`)
+                  .then(r => r.json())
+                  .then(data => setPreview(data.preview))
+                  .catch(() => {});
+              }}
+            />
+          ) : (
+            <div className="flex items-center justify-center py-12">
+              <SpinnerGap size={20} className="animate-spin text-muted-foreground" />
+            </div>
+          )
         ) : preview ? (
           previewViewMode === "rendered" && canRender ? (
             <RenderedView content={preview.content} filePath={filePath} workingDirectory={workingDirectory} />
@@ -259,13 +329,17 @@ export function PreviewPanel() {
   );
 }
 
-/** Capsule toggle for Source / Preview view mode */
+/** Capsule toggle for Source / Preview / Edit view mode */
 function ViewModeToggle({
   value,
   onChange,
+  canRender,
+  canEdit,
 }: {
   value: ViewMode;
   onChange: (v: ViewMode) => void;
+  canRender: boolean;
+  canEdit: boolean;
 }) {
   return (
     <div className="flex h-6 items-center rounded-full bg-muted p-0.5 text-[11px]">
@@ -281,18 +355,34 @@ function ViewModeToggle({
       >
         Source
       </Button>
-      <Button
-        variant="ghost"
-        size="sm"
-        className={`rounded-full px-2 py-0.5 font-medium h-auto ${
-          value === "rendered"
-            ? "bg-background text-foreground shadow-sm"
-            : "text-muted-foreground hover:text-foreground"
-        }`}
-        onClick={() => onChange("rendered")}
-      >
-        Preview
-      </Button>
+      {canRender && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className={`rounded-full px-2 py-0.5 font-medium h-auto ${
+            value === "rendered"
+              ? "bg-background text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+          onClick={() => onChange("rendered")}
+        >
+          Preview
+        </Button>
+      )}
+      {canEdit && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className={`rounded-full px-2 py-0.5 font-medium h-auto ${
+            value === "edit"
+              ? "bg-background text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+          onClick={() => onChange("edit")}
+        >
+          Edit
+        </Button>
+      )}
     </div>
   );
 }
@@ -479,6 +569,117 @@ function resolveMarkdownImages(markdown: string, mdFilePath: string, workingDire
       const apiUrl = `/api/files/resolve-image?src=${encodeURIComponent(src)}&mdFile=${encodeURIComponent(mdFilePath)}&workDir=${encodeURIComponent(workingDirectory)}`;
       return `![${alt}](${apiUrl}${rest})`;
     },
+  );
+}
+
+/** Save status indicator shown in the editor header */
+function SaveStatusIndicator({ status, isDirty }: { status: SaveStatus; isDirty: boolean }) {
+  if (status === "saving") {
+    return (
+      <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
+        <SpinnerGap size={10} className="animate-spin" />
+        Saving…
+      </span>
+    );
+  }
+  if (status === "saved" && !isDirty) {
+    return (
+      <span className="flex items-center gap-1 text-[10px] text-status-success-foreground">
+        <Check size={10} />
+        Saved
+      </span>
+    );
+  }
+  if (status === "error") {
+    return (
+      <span className="text-[10px] text-destructive">
+        Save failed
+      </span>
+    );
+  }
+  if (isDirty) {
+    return (
+      <span className="text-[10px] text-muted-foreground">
+        ●
+      </span>
+    );
+  }
+  return null;
+}
+
+/** In-app text editor with auto-save */
+function EditView({
+  filePath,
+  baseDir,
+  initialContent,
+  onSaved,
+}: {
+  filePath: string;
+  baseDir: string;
+  initialContent: string;
+  onSaved?: () => void;
+}) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const { content, setContent, saveStatus, isDirty, saveNow } = useAutoSave(
+    filePath,
+    baseDir,
+    initialContent,
+    { onSaved }
+  );
+
+  // Focus textarea on mount
+  useEffect(() => {
+    textareaRef.current?.focus();
+  }, []);
+
+  // Ctrl/Cmd+S to force save
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "s") {
+        e.preventDefault();
+        saveNow();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [saveNow]);
+
+  // Handle Tab key for indentation
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Tab") {
+      e.preventDefault();
+      const ta = e.currentTarget;
+      const start = ta.selectionStart;
+      const end = ta.selectionEnd;
+      const newContent = content.substring(0, start) + "  " + content.substring(end);
+      setContent(newContent);
+      // Restore cursor position after React re-render
+      requestAnimationFrame(() => {
+        ta.selectionStart = ta.selectionEnd = start + 2;
+      });
+    }
+  }, [content, setContent]);
+
+  return (
+    <div className="flex h-full flex-col">
+      {/* Editor status bar */}
+      <div className="flex shrink-0 items-center justify-between border-b border-border/30 px-3 py-1">
+        <SaveStatusIndicator status={saveStatus} isDirty={isDirty} />
+        <span className="text-[10px] text-muted-foreground/50">
+          Ctrl+S
+        </span>
+      </div>
+      {/* Textarea editor */}
+      <textarea
+        ref={textareaRef}
+        value={content}
+        onChange={(e) => setContent(e.target.value)}
+        onKeyDown={handleKeyDown}
+        spellCheck={false}
+        className="flex-1 w-full resize-none bg-transparent px-4 py-3 font-mono text-[12px] leading-relaxed text-foreground outline-none placeholder:text-muted-foreground/40 selection:bg-primary/20"
+        style={{ tabSize: 2 }}
+      />
+    </div>
   );
 }
 
