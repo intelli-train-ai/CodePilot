@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useCallback, useRef } from 'react';
 import type { MediaJob, MediaJobItem, PlannerOutput, PlannerItem, JobProgressEvent } from '@/types';
+import { authFetch } from '@/lib/api-client';
 
 // ==========================================
 // Types
@@ -94,7 +95,7 @@ export function useBatchImageGenState(): BatchImageGenContextValue {
     setState(prev => ({ ...prev, phase: 'planning', planningText: '', error: null }));
 
     try {
-      const res = await fetch('/api/media/jobs/plan', {
+      const res = await authFetch('/api/media/jobs/plan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -208,7 +209,7 @@ export function useBatchImageGenState(): BatchImageGenContextValue {
 
     try {
       // Create the job
-      const createRes = await fetch('/api/media/jobs', {
+      const createRes = await authFetch('/api/media/jobs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -237,7 +238,7 @@ export function useBatchImageGenState(): BatchImageGenContextValue {
       }));
 
       // Start execution
-      const startRes = await fetch(`/api/media/jobs/${job.id}/start`, { method: 'POST' });
+      const startRes = await authFetch(`/api/media/jobs/${job.id}/start`, { method: 'POST' });
       if (!startRes.ok) {
         const err = await startRes.json().catch(() => ({ error: 'Failed to start job' }));
         throw new Error(err.error);
@@ -331,7 +332,7 @@ export function useBatchImageGenState(): BatchImageGenContextValue {
 
   const refreshItems = useCallback(async (jobId: string) => {
     try {
-      const res = await fetch(`/api/media/jobs/${jobId}`);
+      const res = await authFetch(`/api/media/jobs/${jobId}`);
       if (res.ok) {
         const data = await res.json();
         setState(prev => ({
@@ -346,7 +347,7 @@ export function useBatchImageGenState(): BatchImageGenContextValue {
   const pauseJob = useCallback(async () => {
     if (!state.currentJob) return;
     try {
-      await fetch(`/api/media/jobs/${state.currentJob.id}/pause`, { method: 'POST' });
+      await authFetch(`/api/media/jobs/${state.currentJob.id}/pause`, { method: 'POST' });
       setState(prev => ({
         ...prev,
         currentJob: prev.currentJob ? { ...prev.currentJob, status: 'paused' } : null,
@@ -362,7 +363,7 @@ export function useBatchImageGenState(): BatchImageGenContextValue {
   const resumeJob = useCallback(async () => {
     if (!state.currentJob) return;
     try {
-      await fetch(`/api/media/jobs/${state.currentJob.id}/resume`, { method: 'POST' });
+      await authFetch(`/api/media/jobs/${state.currentJob.id}/resume`, { method: 'POST' });
       setState(prev => ({
         ...prev,
         currentJob: prev.currentJob ? { ...prev.currentJob, status: 'running' } : null,
@@ -379,7 +380,7 @@ export function useBatchImageGenState(): BatchImageGenContextValue {
   const cancelJob = useCallback(async () => {
     if (!state.currentJob) return;
     try {
-      await fetch(`/api/media/jobs/${state.currentJob.id}/cancel`, { method: 'POST' });
+      await authFetch(`/api/media/jobs/${state.currentJob.id}/cancel`, { method: 'POST' });
       if (progressSourceRef.current) {
         progressSourceRef.current.close();
         progressSourceRef.current = null;
@@ -401,7 +402,7 @@ export function useBatchImageGenState(): BatchImageGenContextValue {
     if (!state.currentJob) return;
     // Resume the job — the executor will pick up failed items that haven't exhausted retries
     try {
-      await fetch(`/api/media/jobs/${state.currentJob.id}/resume`, { method: 'POST' });
+      await authFetch(`/api/media/jobs/${state.currentJob.id}/resume`, { method: 'POST' });
       setState(prev => ({
         ...prev,
         phase: 'executing',
@@ -422,7 +423,7 @@ export function useBatchImageGenState(): BatchImageGenContextValue {
     setState(prev => ({ ...prev, phase: 'syncing', error: null }));
 
     try {
-      const res = await fetch(`/api/media/jobs/${state.currentJob.id}/sync-context`, {
+      const res = await authFetch(`/api/media/jobs/${state.currentJob.id}/sync-context`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ syncMode }),

@@ -1,8 +1,9 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { detectAllCliTools } from '@/lib/cli-tools-detect';
 import { getExpandedPath } from '@/lib/platform';
+import { requireAuth } from '@/lib/auth';
 
 const execFileAsync = promisify(execFile);
 
@@ -20,7 +21,10 @@ async function detectBrew(): Promise<boolean> {
   }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const authError = requireAuth(request);
+  if (authError) return authError;
+
   try {
     const [{ catalog, extra }, hasBrew] = await Promise.all([
       detectAllCliTools(),

@@ -26,6 +26,7 @@ import {
   getRewindPoints,
   respondToPermission,
 } from '@/lib/stream-session-manager';
+import { authFetch } from '@/lib/api-client';
 
 interface ChatViewProps {
   sessionId: string;
@@ -64,7 +65,7 @@ export function ChatView({ sessionId, initialMessages = [], initialHasMore = fal
   useEffect(() => {
     const pid = currentProviderId || 'env';
     const controller = new AbortController();
-    fetch(`/api/providers/options?providerId=${encodeURIComponent(pid)}`, { signal: controller.signal })
+    authFetch(`/api/providers/options?providerId=${encodeURIComponent(pid)}`, { signal: controller.signal })
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         if (!controller.signal.aborted) {
@@ -104,7 +105,7 @@ export function ChatView({ sessionId, initialMessages = [], initialHasMore = fal
   const handleModeChange = useCallback((newMode: string) => {
     setMode(newMode);
     if (sessionId) {
-      fetch(`/api/chat/sessions/${sessionId}`, {
+      authFetch(`/api/chat/sessions/${sessionId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mode: newMode }),
@@ -112,7 +113,7 @@ export function ChatView({ sessionId, initialMessages = [], initialHasMore = fal
         window.dispatchEvent(new CustomEvent('session-updated'));
       }).catch(() => { /* silent */ });
 
-      fetch('/api/chat/mode', {
+      authFetch('/api/chat/mode', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId, mode: newMode }),
@@ -123,7 +124,7 @@ export function ChatView({ sessionId, initialMessages = [], initialHasMore = fal
   const handleProviderModelChange = useCallback((newProviderId: string, model: string) => {
     setCurrentProviderId(newProviderId);
     setCurrentModel(model);
-    fetch(`/api/chat/sessions/${sessionId}`, {
+    authFetch(`/api/chat/sessions/${sessionId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ model, provider_id: newProviderId }),
@@ -177,13 +178,13 @@ export function ChatView({ sessionId, initialMessages = [], initialHasMore = fal
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch('/api/settings/workspace');
+        const res = await authFetch('/api/settings/workspace');
         if (!res.ok || cancelled) return;
         const data = await res.json();
         if (cancelled) return;
 
         if (data.path && workingDirectory !== data.path) {
-          const inspectRes = await fetch(`/api/workspace/inspect?path=${encodeURIComponent(workingDirectory)}`);
+          const inspectRes = await authFetch(`/api/workspace/inspect?path=${encodeURIComponent(workingDirectory)}`);
           if (!inspectRes.ok || cancelled) return;
           const inspectData = await inspectRes.json();
           if (inspectData.hasAssistantData) {
@@ -217,7 +218,7 @@ export function ChatView({ sessionId, initialMessages = [], initialHasMore = fal
     try {
       const model = typeof window !== 'undefined' ? localStorage.getItem('codepilot:last-model') || '' : '';
       const provider_id = typeof window !== 'undefined' ? localStorage.getItem('codepilot:last-provider-id') || '' : '';
-      const res = await fetch('/api/workspace/session', {
+      const res = await authFetch('/api/workspace/session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mode: 'checkin', model, provider_id }),
@@ -240,7 +241,7 @@ export function ChatView({ sessionId, initialMessages = [], initialHasMore = fal
       const earliest = messages[0];
       const earliestRowId = (earliest as Message & { _rowid?: number })._rowid;
       if (!earliestRowId) return;
-      const res = await fetch(`/api/chat/sessions/${sessionId}/messages?limit=100&before=${earliestRowId}`);
+      const res = await authFetch(`/api/chat/sessions/${sessionId}/messages?limit=100&before=${earliestRowId}`);
       if (!res.ok) return;
       const data: MessagesResponse = await res.json();
       setHasMore(data.hasMore ?? false);
@@ -366,7 +367,7 @@ export function ChatView({ sessionId, initialMessages = [], initialHasMore = fal
       pendingImageNoticesRef.current.push(notice);
 
       const dbNotice = `[__IMAGE_GEN_NOTICE__ prompt: "${detail.prompt}", aspect ratio: ${detail.aspectRatio}, resolution: ${detail.resolution}${paths.length > 0 ? `, file path: ${paths.join(', ')}` : ''}]`;
-      fetch('/api/chat/messages', {
+      authFetch('/api/chat/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ session_id: sessionId, role: 'user', content: dbNotice }),

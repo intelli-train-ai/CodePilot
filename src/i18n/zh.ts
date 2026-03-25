@@ -1190,6 +1190,35 @@ const zh: Record<TranslationKey, string> = {
   'widget.error': '组件渲染错误',
   'widget.showCode': '显示代码',
   'widget.hideCode': '隐藏代码',
+
+  // ── Auth ─────────────────────────────────────────────────────
+  'auth.title': '需要认证',
+  'auth.subtitle': '请输入访问令牌以继续',
+  'auth.tokenPlaceholder': '访问令牌',
+  'auth.unlock': '解锁',
+  'auth.verifying': '验证中...',
+  'auth.invalidToken': '令牌无效',
+  'auth.networkError': '网络错误，请重试',
+  'auth.logout': '登出',
+
+  // ── Settings: Security ──────────────────────────────────────
+  'settings.security': '安全',
+  'settings.security.accessToken': '访问令牌',
+  'settings.security.accessTokenDesc': '设置访问令牌后，需要输入令牌才能使用 CodePilot。适用于公网部署场景。',
+  'settings.security.tokenConfigured': '令牌已配置',
+  'settings.security.tokenNotConfigured': '未配置令牌（开放访问）',
+  'settings.security.tokenFromEnv': '令牌通过 CODEPILOT_ACCESS_TOKEN 环境变量设置',
+  'settings.security.setToken': '设置令牌',
+  'settings.security.changeToken': '修改令牌',
+  'settings.security.removeToken': '删除令牌',
+  'settings.security.newTokenPlaceholder': '输入新的访问令牌（至少 6 个字符）',
+  'settings.security.save': '保存',
+  'settings.security.cancel': '取消',
+  'settings.security.tokenSaved': '访问令牌已保存',
+  'settings.security.tokenRemoved': '访问令牌已删除',
+  'settings.security.tokenError': '更新令牌失败',
+  'settings.security.logout': '登出当前会话',
+  'settings.security.logoutDesc': '清除浏览器中存储的令牌，需要重新输入。',
 };
 
 export default zh;

@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { generateSingleImage, NoImageGeneratedError } from '@/lib/image-generator';
+import { requireAuth } from '@/lib/auth';
 
 interface GenerateRequest {
   prompt: string;
@@ -16,6 +17,9 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 300;
 
 export async function POST(request: NextRequest) {
+  const authError = requireAuth(request);
+  if (authError) return authError;
+
   try {
     const body: GenerateRequest = await request.json();
 

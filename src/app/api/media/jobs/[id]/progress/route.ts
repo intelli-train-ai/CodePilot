@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { getMediaJob, getMediaJobItems } from '@/lib/db';
 import { addProgressListener, isJobRunning } from '@/lib/job-executor';
 import type { JobProgressEvent } from '@/types';
+import { requireAuth } from '@/lib/auth';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -10,9 +11,12 @@ export const dynamic = 'force-dynamic';
  * GET /api/media/jobs/:id/progress — SSE real-time progress stream
  */
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const authError = requireAuth(request);
+  if (authError) return authError;
+
   const { id } = await params;
   const job = getMediaJob(id);
   if (!job) {
@@ -71,7 +75,7 @@ export async function GET(
       }, 15000);
 
       // Cleanup on client disconnect (AbortSignal)
-      _request.signal.addEventListener('abort', () => {
+      request.signal.addEventListener('abort', () => {
         clearInterval(heartbeat);
         cleanup();
         try { controller.close(); } catch { /* already closed */ }

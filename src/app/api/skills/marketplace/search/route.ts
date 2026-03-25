@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readLockFile } from "@/lib/skills-lock";
 import type { MarketplaceSkill } from "@/types";
+import { requireAuth } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
+  const authError = requireAuth(request);
+  if (authError) return authError;
+
   try {
     const q = request.nextUrl.searchParams.get("q") || "";
     const limit = request.nextUrl.searchParams.get("limit") || "20";

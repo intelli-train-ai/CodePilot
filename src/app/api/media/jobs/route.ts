@@ -8,6 +8,7 @@ import {
   getMediaJobItems,
 } from '@/lib/db';
 import type { CreateMediaJobRequest } from '@/types';
+import { requireAuth } from '@/lib/auth';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -16,6 +17,9 @@ export const dynamic = 'force-dynamic';
  * GET /api/media/jobs — List all jobs, optionally filtered by sessionId
  */
 export async function GET(request: NextRequest) {
+  const authError = requireAuth(request);
+  if (authError) return authError;
+
   try {
     const { searchParams } = new URL(request.url);
     const sessionId = searchParams.get('sessionId');
@@ -40,6 +44,9 @@ export async function GET(request: NextRequest) {
  * POST /api/media/jobs — Create a new job with items (after plan confirmation)
  */
 export async function POST(request: NextRequest) {
+  const authError = requireAuth(request);
+  if (authError) return authError;
+
   try {
     const body: CreateMediaJobRequest = await request.json();
 

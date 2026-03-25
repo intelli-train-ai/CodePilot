@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import fs from 'fs';
+import { requireAuth } from '@/lib/auth';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -10,6 +11,9 @@ interface RouteParams {
 }
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
+  const authError = requireAuth(request);
+  if (authError) return authError;
+
   try {
     const { id } = await params;
     const db = getDb();
@@ -33,6 +37,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 }
 
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
+  const authError = requireAuth(request);
+  if (authError) return authError;
+
   try {
     const { id } = await params;
     const db = getDb();

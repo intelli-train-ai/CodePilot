@@ -12,6 +12,7 @@ import { CliToolBatchDescribeDialog } from "./CliToolBatchDescribeDialog";
 import { SpinnerGap, Sparkle, ArrowSquareOut, Warning } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import { EXTRA_WELL_KNOWN_BINS } from "@/lib/cli-tools-catalog";
+import { authFetch } from '@/lib/api-client';
 
 type AutoDescCache = Record<string, { zh: string; en: string }>;
 
@@ -34,8 +35,8 @@ export function CliToolsManager() {
   const fetchData = useCallback(async () => {
     try {
       const [catalogRes, installedRes] = await Promise.all([
-        fetch('/api/cli-tools/catalog'),
-        fetch('/api/cli-tools/installed'),
+        authFetch('/api/cli-tools/catalog'),
+        authFetch('/api/cli-tools/installed'),
       ]);
       const catalogData = await catalogRes.json();
       const installedData = await installedRes.json();

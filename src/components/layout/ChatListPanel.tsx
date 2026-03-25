@@ -35,6 +35,7 @@ import {
   COLLAPSED_INITIALIZED_KEY,
 } from "./chat-list-utils";
 import type { ChatSession } from "@/types";
+import { authFetch } from '@/lib/api-client';
 
 interface ChatListPanelProps {
   open: boolean;
@@ -72,7 +73,7 @@ export function ChatListPanel({ open, width }: ChatListPanelProps) {
   const handleFolderSelect = useCallback(async (path: string) => {
     try {
       const { model, provider_id } = getCurrentModelAndProvider();
-      const res = await fetch("/api/chat/sessions", {
+      const res = await authFetch("/api/chat/sessions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ working_directory: path, model, provider_id }),
@@ -103,7 +104,7 @@ export function ChatListPanel({ open, width }: ChatListPanelProps) {
     // Fall back to setup default project if no recent directory
     if (!lastDir) {
       try {
-        const setupRes = await fetch('/api/setup');
+        const setupRes = await authFetch('/api/setup');
         if (setupRes.ok) {
           const setupData = await setupRes.json();
           if (setupData.defaultProject) {
@@ -131,11 +132,11 @@ export function ChatListPanel({ open, width }: ChatListPanelProps) {
         localStorage.removeItem("codepilot:last-working-directory");
         let recovered = false;
         try {
-          const setupRes = await fetch('/api/setup');
+          const setupRes = await authFetch('/api/setup');
           if (setupRes.ok) {
             const setupData = await setupRes.json();
             if (setupData.defaultProject && setupData.defaultProject !== lastDir) {
-              const defaultCheck = await fetch(`/api/files/browse?dir=${encodeURIComponent(setupData.defaultProject)}`);
+              const defaultCheck = await authFetch(`/api/files/browse?dir=${encodeURIComponent(setupData.defaultProject)}`);
               if (defaultCheck.ok) {
                 lastDir = setupData.defaultProject;
                 localStorage.setItem('codepilot:last-working-directory', lastDir!);
@@ -156,7 +157,7 @@ export function ChatListPanel({ open, width }: ChatListPanelProps) {
       }
 
       const { model, provider_id } = getCurrentModelAndProvider();
-      const res = await fetch("/api/chat/sessions", {
+      const res = await authFetch("/api/chat/sessions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ working_directory: lastDir, model, provider_id }),
@@ -197,7 +198,7 @@ export function ChatListPanel({ open, width }: ChatListPanelProps) {
     const controller = new AbortController();
     abortRef.current = controller;
     try {
-      const res = await fetch("/api/chat/sessions", { signal: controller.signal });
+      const res = await authFetch("/api/chat/sessions", { signal: controller.signal });
       if (res.ok) {
         const data = await res.json();
         setSessions(data.sessions || []);
@@ -252,7 +253,7 @@ export function ChatListPanel({ open, width }: ChatListPanelProps) {
     if (!confirm("Delete this conversation?")) return;
     setDeletingSession(sessionId);
     try {
-      const res = await fetch(`/api/chat/sessions/${sessionId}`, {
+      const res = await authFetch(`/api/chat/sessions/${sessionId}`, {
         method: "DELETE",
       });
       if (res.ok) {
@@ -274,7 +275,7 @@ export function ChatListPanel({ open, width }: ChatListPanelProps) {
 
   const handleRenameSession = async (sessionId: string, newTitle: string) => {
     try {
-      const res = await fetch(`/api/chat/sessions/${sessionId}`, {
+      const res = await authFetch(`/api/chat/sessions/${sessionId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title: newTitle }),
@@ -296,7 +297,7 @@ export function ChatListPanel({ open, width }: ChatListPanelProps) {
     const deletedIds = new Set<string>();
     for (const session of projectSessions) {
       try {
-        const res = await fetch(`/api/chat/sessions/${session.id}`, { method: "DELETE" });
+        const res = await authFetch(`/api/chat/sessions/${session.id}`, { method: "DELETE" });
         if (res.ok) {
           deletedIds.add(session.id);
           if (isInSplit(session.id)) {
@@ -326,7 +327,7 @@ export function ChatListPanel({ open, width }: ChatListPanelProps) {
     e.stopPropagation();
     try {
       const { model, provider_id } = getCurrentModelAndProvider();
-      const res = await fetch("/api/chat/sessions", {
+      const res = await authFetch("/api/chat/sessions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ working_directory: workingDirectory, model, provider_id }),

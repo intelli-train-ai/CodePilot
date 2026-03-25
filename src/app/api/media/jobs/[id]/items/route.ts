@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { getMediaJob, getMediaJobItems, updateMediaJobItem } from '@/lib/db';
 import type { UpdateMediaJobItemsRequest } from '@/types';
+import { requireAuth } from '@/lib/auth';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -12,6 +13,9 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const authError = requireAuth(request);
+  if (authError) return authError;
+
   try {
     const { id } = await params;
     const job = getMediaJob(id);

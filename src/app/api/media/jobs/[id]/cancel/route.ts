@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { getMediaJob } from '@/lib/db';
 import { cancelJob } from '@/lib/job-executor';
+import { requireAuth } from '@/lib/auth';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -9,9 +10,12 @@ export const dynamic = 'force-dynamic';
  * POST /api/media/jobs/:id/cancel — Cancel a running or paused job
  */
 export async function POST(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const authError = requireAuth(request);
+  if (authError) return authError;
+
   try {
     const { id } = await params;
     const job = getMediaJob(id);

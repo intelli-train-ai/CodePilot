@@ -9,6 +9,7 @@ import { GalleryGrid, type GalleryItem } from '@/components/gallery/GalleryGrid'
 import { GalleryDetail } from '@/components/gallery/GalleryDetail';
 import { useTranslation } from '@/hooks/useTranslation';
 import type { TranslationKey } from '@/i18n';
+import { authFetch } from '@/lib/api-client';
 
 const PAGE_SIZE = 20;
 
@@ -44,7 +45,7 @@ export default function GalleryPage() {
       params.set('limit', String(PAGE_SIZE));
       params.set('offset', reset ? '0' : String(offset));
 
-      const res = await fetch(`/api/media/gallery?${params.toString()}`);
+      const res = await authFetch(`/api/media/gallery?${params.toString()}`);
       if (res.ok) {
         const data = await res.json();
         if (reset) {
@@ -77,7 +78,7 @@ export default function GalleryPage() {
 
   const handleDelete = useCallback(async (id: string) => {
     try {
-      const res = await fetch(`/api/media/${id}`, { method: 'DELETE' });
+      const res = await authFetch(`/api/media/${id}`, { method: 'DELETE' });
       if (res.ok) {
         setItems((prev) => prev.filter((item) => item.id !== id));
         setTotal((prev) => prev - 1);
@@ -89,7 +90,7 @@ export default function GalleryPage() {
 
   const handleToggleFavorite = useCallback(async (id: string) => {
     try {
-      const res = await fetch(`/api/media/${id}/favorite`, { method: 'PUT' });
+      const res = await authFetch(`/api/media/${id}/favorite`, { method: 'PUT' });
       if (res.ok) {
         const data = await res.json();
         const favorited = !!data.favorited;

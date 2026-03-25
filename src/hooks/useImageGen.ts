@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useCallback, useRef } from 'react';
+import { authFetch } from '@/lib/api-client';
 
 export interface ImageGenResult {
   id: string;
@@ -67,7 +68,7 @@ export function useImageGenState(): ImageGenContextValue {
         body.referenceImages = refImagesData;
       }
 
-      const res = await fetch('/api/media/generate', {
+      const res = await authFetch('/api/media/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),

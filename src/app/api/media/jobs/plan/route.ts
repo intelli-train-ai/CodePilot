@@ -3,6 +3,7 @@ import { streamTextFromProvider } from '@/lib/text-generator';
 import { resolveProvider } from '@/lib/provider-resolver';
 import fs from 'fs';
 import type { PlanMediaJobRequest } from '@/types';
+import { requireAuth } from '@/lib/auth';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -38,6 +39,9 @@ Guidelines:
  * Does NOT write to DB — returns plan for client preview/editing
  */
 export async function POST(request: NextRequest) {
+  const authError = requireAuth(request);
+  if (authError) return authError;
+
   try {
     const body: PlanMediaJobRequest = await request.json();
 

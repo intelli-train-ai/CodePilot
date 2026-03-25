@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from '@/lib/auth';
 
 // In-memory cache: repo source → Map<skillId, raw-content path>
 const treeCache = new Map<string, { paths: Map<string, string>; ts: number }>();
@@ -51,6 +52,9 @@ async function findSkillPath(
 }
 
 export async function GET(request: NextRequest) {
+  const authError = requireAuth(request);
+  if (authError) return authError;
+
   try {
     const source = request.nextUrl.searchParams.get("source") || "";
     const skillId = request.nextUrl.searchParams.get("skillId") || "";

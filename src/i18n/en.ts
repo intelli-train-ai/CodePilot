@@ -1193,6 +1193,35 @@ const en = {
   'widget.error': 'Widget render error',
   'widget.showCode': 'Show code',
   'widget.hideCode': 'Hide code',
+
+  // ── Auth ─────────────────────────────────────────────────────
+  'auth.title': 'Authentication Required',
+  'auth.subtitle': 'Enter your access token to continue',
+  'auth.tokenPlaceholder': 'Access token',
+  'auth.unlock': 'Unlock',
+  'auth.verifying': 'Verifying...',
+  'auth.invalidToken': 'Invalid token',
+  'auth.networkError': 'Network error, please try again',
+  'auth.logout': 'Logout',
+
+  // ── Settings: Security ──────────────────────────────────────
+  'settings.security': 'Security',
+  'settings.security.accessToken': 'Access Token',
+  'settings.security.accessTokenDesc': 'Require a token to access CodePilot. Useful when exposed on a public network.',
+  'settings.security.tokenConfigured': 'Token is configured',
+  'settings.security.tokenNotConfigured': 'No token configured (open access)',
+  'settings.security.tokenFromEnv': 'Token is set via CODEPILOT_ACCESS_TOKEN environment variable',
+  'settings.security.setToken': 'Set Token',
+  'settings.security.changeToken': 'Change Token',
+  'settings.security.removeToken': 'Remove Token',
+  'settings.security.newTokenPlaceholder': 'Enter new access token (min 6 characters)',
+  'settings.security.save': 'Save',
+  'settings.security.cancel': 'Cancel',
+  'settings.security.tokenSaved': 'Access token saved',
+  'settings.security.tokenRemoved': 'Access token removed',
+  'settings.security.tokenError': 'Failed to update token',
+  'settings.security.logout': 'Logout current session',
+  'settings.security.logoutDesc': 'Clear the stored token in this browser. You will need to re-enter it.',
 } as const;
 
 export type TranslationKey = keyof typeof en;

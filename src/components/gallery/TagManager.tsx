@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useTranslation } from '@/hooks/useTranslation';
 import type { TranslationKey } from '@/i18n';
+import { authFetch } from '@/lib/api-client';
 
 export interface Tag {
   id: string;
@@ -164,7 +165,7 @@ export function useTags() {
 
   const fetchTags = useCallback(async () => {
     try {
-      const res = await fetch('/api/media/tags');
+      const res = await authFetch('/api/media/tags');
       if (res.ok) {
         const data = await res.json();
         setTags(data.tags || []);
@@ -182,7 +183,7 @@ export function useTags() {
 
   const addTag = useCallback(async (name: string, color?: string) => {
     try {
-      const res = await fetch('/api/media/tags', {
+      const res = await authFetch('/api/media/tags', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, color }),
@@ -200,7 +201,7 @@ export function useTags() {
 
   const removeTag = useCallback(async (tagId: string) => {
     try {
-      const res = await fetch(`/api/media/tags/${tagId}`, { method: 'DELETE' });
+      const res = await authFetch(`/api/media/tags/${tagId}`, { method: 'DELETE' });
       if (res.ok) {
         setTags((prev) => prev.filter((t) => t.id !== tagId));
       }

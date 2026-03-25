@@ -10,6 +10,7 @@ import { usePanel } from '@/hooks/usePanel';
 import type { TranslationKey } from '@/i18n';
 import type { ReferenceImage } from '@/types';
 import type { ImageGenResult } from '@/hooks/useImageGen';
+import { authFetch } from '@/lib/api-client';
 
 const ASPECT_RATIOS = [
   '1:1', '16:9', '9:16', '3:2', '2:3', '4:3', '3:4', '4:5', '5:4', '21:9',
@@ -78,7 +79,7 @@ export function ImageGenConfirmation({
       const refData = referenceImages?.filter(r => r.data).map(r => ({ mimeType: r.mimeType, data: r.data! }));
       const refPaths = referenceImages?.filter(r => r.localPath).map(r => r.localPath!);
 
-      const res = await fetch('/api/media/generate', {
+      const res = await authFetch('/api/media/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -134,7 +135,7 @@ export function ImageGenConfirmation({
             // Pass the raw block for exact content matching when messageId is unavailable
             raw_request_block: rawRequestBlock,
           };
-          const doPut = () => fetch('/api/chat/messages', {
+          const doPut = () => authFetch('/api/chat/messages', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(persistBody),

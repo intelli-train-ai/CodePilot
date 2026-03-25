@@ -19,6 +19,7 @@ import { usePanel } from "@/hooks/usePanel";
 import { useTranslation } from "@/hooks/useTranslation";
 import { useClientPlatform } from '@/hooks/useClientPlatform';
 import { showToast } from '@/hooks/useToast';
+import { authFetch } from '@/lib/api-client';
 
 export function UnifiedTopBar() {
   const {
@@ -58,7 +59,7 @@ export function UnifiedTopBar() {
       return;
     }
     try {
-      const res = await fetch(`/api/chat/sessions/${sessionId}`, {
+      const res = await authFetch(`/api/chat/sessions/${sessionId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: trimmed }),
@@ -147,7 +148,7 @@ export function UnifiedTopBar() {
                       if (window.electronAPI?.shell?.openPath) {
                         window.electronAPI.shell.openPath(workingDirectory);
                       } else {
-                        fetch('/api/files/open', {
+                        authFetch('/api/files/open', {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({ path: workingDirectory }),
