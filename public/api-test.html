@@ -218,9 +218,15 @@
     <div class="ctx-row"><span class="ctx-label">Tag:</span><input class="ctx-input" id="ctxTag" placeholder="tag id" oninput="onCtxEdit('tagId', this.value)"></div>
     <div class="ctx-row"><span class="ctx-label">Permission:</span><input class="ctx-input" id="ctxPermission" placeholder="permission request id" oninput="onCtxEdit('permissionRequestId', this.value)"></div>
     <div class="ctx-row"><span class="ctx-label">Work Dir:</span><input class="ctx-input" id="ctxWorkDir" placeholder="/path/to/dir" oninput="onCtxEdit('workDir', this.value)"></div>
+    <div class="ctx-row" style="margin-top:6px;padding-top:6px;border-top:1px solid var(--border)">
+      <span class="ctx-label" style="color:var(--orange)">🔑 Token:</span>
+      <input class="ctx-input" id="ctxToken" type="password" placeholder="access token" style="color:var(--orange)" oninput="onTokenEdit(this.value)">
+    </div>
+    <div class="ctx-row"><span class="ctx-label">Auth:</span><span class="ctx-value" id="ctxAuthStatus" style="font-size:10px">checking...</span></div>
     <div class="ctx-actions">
       <button class="ctx-btn" onclick="seedData()">Re-seed Data</button>
       <button class="ctx-btn danger" onclick="cleanData()">Clean Up</button>
+      <button class="ctx-btn" onclick="checkAuthStatus()" style="margin-left:auto">Check Auth</button>
     </div>
   </div>
   <div class="sidebar-list" id="endpointList"></div>
@@ -272,6 +278,41 @@
 </div>
 
 <script>
+// ── Auth token ──
+var AUTH_TOKEN = localStorage.getItem('codepilot:auth_token') || '';
+
+function onTokenEdit(value) {
+  AUTH_TOKEN = value;
+  localStorage.setItem('codepilot:auth_token', value);
+}
+
+function authHeaders(extra) {
+  var h = Object.assign({ 'Content-Type': 'application/json' }, extra || {});
+  if (AUTH_TOKEN) h['Authorization'] = 'Bearer ' + AUTH_TOKEN;
+  return h;
+}
+
+async function checkAuthStatus() {
+  var el = document.getElementById('ctxAuthStatus');
+  try {
+    var r = await fetch('/api/auth/status', { headers: authHeaders() });
+    var d = await r.json();
+    if (!d.enabled) {
+      el.textContent = 'disabled (no token required)';
+      el.className = 'ctx-value ok';
+    } else if (d.authenticated) {
+      el.textContent = 'authenticated (' + d.tokenSource + ')';
+      el.className = 'ctx-value ok';
+    } else {
+      el.textContent = 'not authenticated — enter token above';
+      el.className = 'ctx-value missing';
+    }
+  } catch (e) {
+    el.textContent = 'error: ' + e.message;
+    el.className = 'ctx-value missing';
+  }
+}
+
 // ── Context from seed endpoint ──
 var CTX = {
   sessionId: '', userMessageId: '', assistantMessageId: '',
@@ -283,7 +324,7 @@ var CTX = {
 async function seedData() {
   setStatus('seeding...');
   try {
-    var r = await fetch('/api/api-test/seed');
+    var r = await fetch('/api/api-test/seed', { headers: authHeaders() });
     var d = await r.json();
     if (!d.ok) { setStatus('seed failed: ' + (d.error || 'unknown'), true); return; }
     var c = d.context;
@@ -318,7 +359,7 @@ async function seedData() {
 
 async function cleanData() {
   try {
-    await fetch('/api/api-test/seed', { method: 'DELETE' });
+    await fetch('/api/api-test/seed', { method: 'DELETE', headers: authHeaders() });
     setStatus('cleaned — click Re-seed to recreate');
     ['ctxSession','ctxProvider','ctxUserMsg','ctxAsstMsg','ctxTask','ctxTag','ctxPermission','ctxWorkDir'].forEach(function(id) {
       document.getElementById(id).value = '';
@@ -361,6 +402,14 @@ function buildEndpoints() {
   var sn = CTX.skillNames.length > 0 ? CTX.skillNames[0] : '__apitest__skill';
 
   ENDPOINTS = [
+    // ── Auth ──
+    { cat: 'Auth', method: 'GET', path: '/api/auth/status', desc: 'Auth status', safe: true },
+    { cat: 'Auth', method: 'POST', path: '/api/auth/verify', desc: 'Verify token',
+      body: { token: AUTH_TOKEN || 'your-token-here' } },
+    { cat: 'Auth', method: 'PUT', path: '/api/auth/token', desc: 'Set new token',
+      body: { token: 'new-token-at-least-6-chars' } },
+    { cat: 'Auth', method: 'DELETE', path: '/api/auth/token', desc: 'Clear token (disable auth)', warn: true },
+
     // ── System ──
     { cat: 'System', method: 'GET', path: '/api/health', desc: 'Health check', safe: true },
     { cat: 'System', method: 'GET', path: '/api/claude-status', desc: 'Claude SDK status', safe: true },
@@ -650,7 +699,7 @@ async function sendRequest() {
     var fetchOpts = {
       method: method,
       signal: abortController.signal,
-      headers: Object.assign({ 'Content-Type': 'application/json' }, customHeaders),
+      headers: authHeaders(customHeaders),
     };
     if (method !== 'GET' && method !== 'DELETE') {
       fetchOpts.body = bodyStr;
@@ -719,8 +768,14 @@ document.addEventListener('keydown', function(e) {
   if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') sendRequest();
 });
 
+// Restore token from localStorage
+if (AUTH_TOKEN) {
+  document.getElementById('ctxToken').value = AUTH_TOKEN;
+}
+
 buildEndpoints();
 renderSidebar();
+checkAuthStatus();
 seedData(); // Auto-seed on page load
 </script>
 </body>

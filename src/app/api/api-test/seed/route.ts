@@ -1,5 +1,6 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getDb, createSession, addMessage, createTask, createProvider, createPermissionRequest } from '@/lib/db';
+import { requireAuth } from '@/lib/auth';
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
@@ -12,7 +13,9 @@ import os from 'os';
  * Idempotent: checks for existing test data before creating.
  * Returns all IDs needed by every endpoint in the API tester.
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const authError = requireAuth(request);
+  if (authError) return authError;
   try {
     const db = getDb();
     const prefix = '__apitest__';
@@ -223,7 +226,9 @@ export async function GET() {
  *
  * Cleans up all test data created by the seed endpoint.
  */
-export async function DELETE() {
+export async function DELETE(request: NextRequest) {
+  const authError = requireAuth(request);
+  if (authError) return authError;
   try {
     const db = getDb();
     const prefix = '__apitest__';
