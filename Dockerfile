@@ -8,47 +8,48 @@
 # Custom port: docker run -p 8080:8080 -e PORT=8080 -v codepilot-data:/data -v ~/projects:/workspace codepilot-web
 # ============================================================
 
-# ---------- Stage 1: clone + install dependencies ----------
-FROM node:22-slim AS deps
+# ---------- Stage 1: clone + install + build ----------
+FROM swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/node:22-slim AS builder
 
 WORKDIR /app
+
+# Use China mirror for apt (Debian bookworm)
+RUN sed -i 's|deb.debian.org|mirrors.aliyun.com|g' /etc/apt/sources.list.d/debian.sources
 
 # Git for cloning, native build tools for better-sqlite3 / zlib-sync
 RUN apt-get update && \
     apt-get install -y --no-install-recommends git python3 make g++ ca-certificates && \
     rm -rf /var/lib/apt/lists/*
 
+# Use China npm mirror
+RUN npm config set registry https://registry.npmmirror.com
+
 ARG CODEPILOT_BRANCH=main
 RUN git clone --depth 1 --branch ${CODEPILOT_BRANCH} \
-    https://github.com/intelli-train-ai/CodePilot.git /app
-
-RUN npm ci
-
-# ---------- Stage 2: build Next.js standalone ----------
-FROM node:22-slim AS builder
-
-WORKDIR /app
-
-COPY --from=deps /app ./
+    https://github.com/intelli-train-ai/CodePilot.git /app && \
+    rm -rf .git
 
 # Disable Next.js telemetry during build
 ENV NEXT_TELEMETRY_DISABLED=1
 
-RUN npm run build
+RUN npm ci && npm run build && npm cache clean --force
 
-# ---------- Stage 3: minimal production runtime ----------
-FROM node:22-slim AS runner
+# ---------- Stage 2: minimal production runtime ----------
+FROM swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/node:22-slim AS runner
 
 WORKDIR /app
 
-# Runtime deps: better-sqlite3, SSL certs, git (required by Claude Code CLI)
-RUN apt-get update && \
+# Use China mirror for apt, install runtime deps, clean up in one layer
+RUN sed -i 's|deb.debian.org|mirrors.aliyun.com|g' /etc/apt/sources.list.d/debian.sources && \
+    apt-get update && \
     apt-get install -y --no-install-recommends libsqlite3-0 ca-certificates git && \
     rm -rf /var/lib/apt/lists/*
 
-# Install Claude Code CLI (version controlled via build arg)
+# Use China npm mirror & install Claude Code CLI, clean cache
 ARG CLAUDE_CODE_VERSION=latest
-RUN npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}
+RUN npm config set registry https://registry.npmmirror.com && \
+    npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION} && \
+    npm cache clean --force
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
