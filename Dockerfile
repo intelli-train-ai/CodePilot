@@ -8,7 +8,7 @@
 # Custom port: docker run -p 8080:8080 -e PORT=8080 -v codepilot-data:/data -v ~/projects:/workspace codepilot-web
 # ============================================================
 
-# ---------- Stage 1: clone + install + build ----------
+# ---------- Stage 1: install + build ----------
 FROM swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/node:22-slim AS builder
 
 WORKDIR /app
@@ -16,18 +16,16 @@ WORKDIR /app
 # Use China mirror for apt (Debian bookworm)
 RUN sed -i 's|deb.debian.org|mirrors.aliyun.com|g' /etc/apt/sources.list.d/debian.sources
 
-# Git for cloning, native build tools for better-sqlite3 / zlib-sync
+# Native build tools for better-sqlite3 / zlib-sync
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends git python3 make g++ ca-certificates && \
+    apt-get install -y --no-install-recommends python3 make g++ && \
     rm -rf /var/lib/apt/lists/*
 
 # Use China npm mirror
 RUN npm config set registry https://registry.npmmirror.com
 
-ARG CODEPILOT_BRANCH=main
-RUN git clone --depth 1 --branch ${CODEPILOT_BRANCH} \
-    https://github.com/intelli-train-ai/CodePilot.git /app && \
-    rm -rf .git
+# Copy local source (filtered by .dockerignore)
+COPY . .
 
 # Disable Next.js telemetry during build
 ENV NEXT_TELEMETRY_DISABLED=1
