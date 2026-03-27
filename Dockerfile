@@ -21,16 +21,20 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends python3 make g++ && \
     rm -rf /var/lib/apt/lists/*
 
-# Use China npm mirror
-RUN npm config set registry https://registry.npmmirror.com
+# Install pnpm & use China npm mirror
+ENV NPM_CONFIG_REGISTRY=https://registry.npmmirror.com
+RUN corepack enable && corepack prepare pnpm@9 --activate
 
-# Copy local source (filtered by .dockerignore)
+# --- 依赖层（只要 lockfile 不变就走缓存）---
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+COPY apps/site/package.json apps/site/package.json
+RUN pnpm install --frozen-lockfile
+
+# --- 源码层 + 构建 ---
 COPY . .
 
-# Disable Next.js telemetry during build
 ENV NEXT_TELEMETRY_DISABLED=1
-
-RUN npm ci && npm run build && npm cache clean --force
+RUN pnpm run build
 
 # ---------- Stage 2: minimal production runtime ----------
 FROM swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/node:22-slim AS runner
@@ -43,7 +47,8 @@ RUN sed -i 's|deb.debian.org|mirrors.aliyun.com|g' /etc/apt/sources.list.d/debia
     apt-get install -y --no-install-recommends libsqlite3-0 ca-certificates git && \
     rm -rf /var/lib/apt/lists/*
 
-# Use China npm mirror & install Claude Code CLI, clean cache
+# Install pnpm & Claude Code CLI, clean cache
+RUN corepack enable && corepack prepare pnpm@9 --activate
 ARG CLAUDE_CODE_VERSION=latest
 RUN npm config set registry https://registry.npmmirror.com && \
     npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION} && \
