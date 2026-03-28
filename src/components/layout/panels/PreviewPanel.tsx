@@ -428,14 +428,54 @@ function SourceView({ preview, isDark }: { preview: FilePreviewType; isDark: boo
 
 /** Image preview view */
 function ImageView({ filePath }: { filePath: string }) {
-  const src = `/api/files/raw?path=${encodeURIComponent(filePath)}`;
   const fileName = filePath.split("/").pop() || filePath;
+  const [objectUrl, setObjectUrl] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let revoked = false;
+    authFetch(`/api/files/raw?path=${encodeURIComponent(filePath)}`)
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.blob();
+      })
+      .then((blob) => {
+        if (revoked) return;
+        setObjectUrl(URL.createObjectURL(blob));
+      })
+      .catch((err) => {
+        if (!revoked) setError(err.message);
+      });
+    return () => {
+      revoked = true;
+      setObjectUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return null;
+      });
+    };
+  }, [filePath]);
+
+  if (error) {
+    return (
+      <div className="flex h-full items-center justify-center p-4 text-muted-foreground">
+        Failed to load image: {error}
+      </div>
+    );
+  }
+
+  if (!objectUrl) {
+    return (
+      <div className="flex h-full items-center justify-center p-4">
+        <SpinnerGap className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-full items-center justify-center p-4">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src={src}
+        src={objectUrl}
         alt={fileName}
         className="max-h-full max-w-full object-contain"
       />
@@ -445,10 +485,51 @@ function ImageView({ filePath }: { filePath: string }) {
 
 /** PDF preview via native browser rendering */
 function PdfView({ filePath }: { filePath: string }) {
-  const src = `/api/files/raw?path=${encodeURIComponent(filePath)}`;
+  const [objectUrl, setObjectUrl] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let revoked = false;
+    authFetch(`/api/files/raw?path=${encodeURIComponent(filePath)}`)
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.blob();
+      })
+      .then((blob) => {
+        if (revoked) return;
+        setObjectUrl(URL.createObjectURL(blob));
+      })
+      .catch((err) => {
+        if (!revoked) setError(err.message);
+      });
+    return () => {
+      revoked = true;
+      setObjectUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return null;
+      });
+    };
+  }, [filePath]);
+
+  if (error) {
+    return (
+      <div className="flex h-full items-center justify-center p-4 text-muted-foreground">
+        Failed to load PDF: {error}
+      </div>
+    );
+  }
+
+  if (!objectUrl) {
+    return (
+      <div className="flex h-full items-center justify-center p-4">
+        <SpinnerGap className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
   return (
     <iframe
-      src={src}
+      src={objectUrl}
       className="h-full w-full border-0"
       title="PDF Preview"
     />
