@@ -276,6 +276,8 @@ const en = {
   'skills.placeholder': 'Write your skill prompt in Markdown...',
   'skills.description': 'Manage reusable prompt patterns and automation skills',
   'skills.mySkills': 'My Skills',
+  'skills.plugins': 'Plugins',
+  'skills.noPlugins': 'No plugins found',
   'skills.marketplace': 'Marketplace',
   'skills.marketplaceSearch': 'Search Skills.sh...',
   'skills.install': 'Install',
