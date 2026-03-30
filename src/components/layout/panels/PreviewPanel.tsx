@@ -267,12 +267,10 @@ export function PreviewPanel() {
   const isMedia = isMediaPreview(filePath);
 
   // Build direct file serve URL for media files.
-  // Prefer /api/files/serve (session-scoped) when sessionId is available;
-  // fall back to /api/files/raw (home-scoped) for pre-session state.
+  // Use /api/files/raw which accepts an absolute path and works with
+  // browser-initiated requests (img/video/audio src) without auth headers.
   const fileServeUrl = filePath
-    ? sessionId
-      ? `/api/files/serve?path=${encodeURIComponent(filePath)}&sessionId=${encodeURIComponent(sessionId)}`
-      : `/api/files/raw?path=${encodeURIComponent(filePath)}`
+    ? `/api/files/raw?path=${encodeURIComponent(filePath)}`
     : '';
 
   // Reset feedback state when switching files
@@ -777,18 +775,10 @@ function SourceView({ preview, isDark }: { preview: FilePreviewType; isDark: boo
   );
 }
 
-/** Direct media preview — no API fetch needed */
+/** Direct media preview — images use authFetch + blob, video/audio use direct URL */
 function MediaView({ filePath, fileServeUrl }: { filePath: string; fileServeUrl: string }) {
   if (isImagePreview(filePath)) {
-    return (
-      <div className="flex items-center justify-center p-4 h-full">
-        <img
-          src={fileServeUrl}
-          alt={filePath.split('/').pop() || ''}
-          className="max-w-full max-h-full object-contain rounded"
-        />
-      </div>
-    );
+    return <ImageView filePath={filePath} />;
   }
 
   if (isVideoPreview(filePath)) {
