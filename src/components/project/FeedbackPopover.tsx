@@ -9,6 +9,7 @@ interface FeedbackPopoverProps {
   screenshot: string; // data:image/png;base64,...
   filePath: string;
   lineRange?: { start: number; end: number };
+  pageRange?: { start: number; end: number };
   /** Position relative to the selection container */
   anchorRect: { x: number; y: number; width: number; height: number };
   onSend: (text: string, screenshot: string, context: string) => void;
@@ -19,6 +20,7 @@ export function FeedbackPopover({
   screenshot,
   filePath,
   lineRange,
+  pageRange,
   anchorRect,
   onSend,
   onCancel,
@@ -50,10 +52,16 @@ export function FeedbackPopover({
     if (lineRange) {
       contextParts.push(`📍 ${t('feedback.lineRange')}: L${lineRange.start}-L${lineRange.end}`);
     }
+    if (pageRange) {
+      const pageInfo = pageRange.start === pageRange.end
+        ? `📄 ${t('feedback.page')}: ${pageRange.start}`
+        : `📄 ${t('feedback.pageRange')}: ${pageRange.start}-${pageRange.end}`;
+      contextParts.push(pageInfo);
+    }
     contextParts.push("---", trimmed);
 
     onSend(contextParts.join("\n"), screenshot, fileName);
-  }, [text, filePath, lineRange, screenshot, onSend, t]);
+  }, [text, filePath, lineRange, pageRange, screenshot, onSend, t]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {

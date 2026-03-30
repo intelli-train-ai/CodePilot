@@ -90,6 +90,12 @@ function isOffice(filePath: string): boolean {
   return OFFICE_EXTENSIONS.has(getExtension(filePath));
 }
 
+/** PPTX/PPT files get converted to PDF for high-fidelity preview */
+const PPTX_EXTENSIONS = new Set([".ppt", ".pptx"]);
+function isPptx(filePath: string): boolean {
+  return PPTX_EXTENSIONS.has(getExtension(filePath));
+}
+
 function isHtml(filePath: string): boolean {
   const ext = getExtension(filePath);
   return ext === ".html" || ext === ".htm";
@@ -122,8 +128,11 @@ export function PreviewPanel() {
     screenshot: string;
     selectionRect: SelectionRect;
     lineRange?: { start: number; end: number };
+    pageRange?: { start: number; end: number };
   } | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  /** Page boundary offsets (cumulative top positions) populated by PdfView */
+  const pdfPageOffsetsRef = useRef<number[]>([]);
 
   // Recording mode (HTML files only)
   const [recordingActive, setRecordingActive] = useState(false);
@@ -137,8 +146,9 @@ export function PreviewPanel() {
 
   const filePath = previewFile || "";
   const imageFile = isImage(filePath);
-  const pdfFile = isPdf(filePath);
-  const officeFile = isOffice(filePath);
+  const pptxFile = isPptx(filePath);
+  const pdfFile = isPdf(filePath) || pptxFile;
+  const officeFile = isOffice(filePath) && !pptxFile;
   const editable = isEditable(filePath);
   const htmlFile = isHtml(filePath);
   const [officeHtml, setOfficeHtml] = useState<string | null>(null);
@@ -353,7 +363,24 @@ export function PreviewPanel() {
       lineRange = { start: startLine, end: endLine };
     }
 
-    setFeedbackData({ screenshot, selectionRect: rect, lineRange });
+    // Estimate page range for PDF/PPTX files
+    let pageRange: { start: number; end: number } | undefined;
+    if (pdfFile && pdfPageOffsetsRef.current.length > 0) {
+      const offsets = pdfPageOffsetsRef.current;
+      const scrollTop = contentRef.current?.scrollTop ?? 0;
+      const selTop = rect.y + scrollTop;
+      const selBottom = selTop + rect.height;
+      let startPage = 1;
+      let endPage = offsets.length;
+      for (let i = 0; i < offsets.length; i++) {
+        const pageBottom = i + 1 < offsets.length ? offsets[i + 1] : Infinity;
+        if (offsets[i] <= selTop && selTop < pageBottom) startPage = i + 1;
+        if (offsets[i] <= selBottom && selBottom <= pageBottom) { endPage = i + 1; break; }
+      }
+      pageRange = { start: startPage, end: endPage };
+    }
+
+    setFeedbackData({ screenshot, selectionRect: rect, lineRange, pageRange });
   }, [preview, imageFile, pdfFile, officeFile]);
 
   const handleFeedbackSend = useCallback((context: string, screenshot: string, fName: string) => {
@@ -582,7 +609,11 @@ export function PreviewPanel() {
         ) : imageFile ? (
           <ImageView filePath={filePath} />
         ) : pdfFile ? (
-          <PdfView filePath={filePath} />
+          <PdfView
+            filePath={filePath}
+            fetchUrl={pptxFile ? `/api/files/convert-pdf?path=${encodeURIComponent(filePath)}` : undefined}
+            onPageOffsets={(offsets) => { pdfPageOffsetsRef.current = offsets; }}
+          />
         ) : officeFile ? (
           loading ? (
             <div className="flex items-center justify-center py-12">
@@ -649,12 +680,26 @@ export function PreviewPanel() {
           />
         )}
 
+        {/* Selection highlight retained while feedback popover is open */}
+        {!htmlFile && feedbackData && (
+          <div
+            className="pointer-events-none absolute border-2 border-primary bg-primary/10 rounded-sm z-40"
+            style={{
+              left: feedbackData.selectionRect.x,
+              top: feedbackData.selectionRect.y,
+              width: feedbackData.selectionRect.width,
+              height: feedbackData.selectionRect.height,
+            }}
+          />
+        )}
+
         {/* Feedback popover (non-HTML files) */}
         {!htmlFile && feedbackData && (
           <FeedbackPopover
             screenshot={feedbackData.screenshot}
             filePath={filePath}
             lineRange={feedbackData.lineRange}
+            pageRange={feedbackData.pageRange}
             anchorRect={feedbackData.selectionRect}
             onSend={handleFeedbackSend}
             onCancel={handleFeedbackCancel}
@@ -862,33 +907,89 @@ function ImageView({ filePath }: { filePath: string }) {
   );
 }
 
-/** PDF preview via native browser rendering */
-function PdfView({ filePath }: { filePath: string }) {
-  const [objectUrl, setObjectUrl] = useState<string | null>(null);
+/** Data for a single rendered PDF page */
+interface PdfPageData {
+  dataUrl: string;
+  width: number;
+  height: number;
+}
+
+/** PDF preview rendered page-by-page via pdf.js canvases */
+function PdfView({
+  filePath,
+  fetchUrl,
+  onPageOffsets,
+}: {
+  filePath: string;
+  fetchUrl?: string;
+  onPageOffsets?: (offsets: number[]) => void;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [pages, setPages] = useState<PdfPageData[]>([]);
+  const onPageOffsetsRef = useRef(onPageOffsets);
+  onPageOffsetsRef.current = onPageOffsets;
 
   useEffect(() => {
-    let revoked = false;
-    authFetch(`/api/files/raw?path=${encodeURIComponent(filePath)}`)
-      .then((res) => {
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const pdfjsLib = await import('pdfjs-dist');
+        pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+
+        const url = fetchUrl || `/api/files/raw?path=${encodeURIComponent(filePath)}`;
+        const res = await authFetch(url);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.blob();
-      })
-      .then((blob) => {
-        if (revoked) return;
-        setObjectUrl(URL.createObjectURL(blob));
-      })
-      .catch((err) => {
-        if (!revoked) setError(err.message);
-      });
-    return () => {
-      revoked = true;
-      setObjectUrl((prev) => {
-        if (prev) URL.revokeObjectURL(prev);
-        return null;
-      });
-    };
-  }, [filePath]);
+        const arrayBuffer = await res.arrayBuffer();
+        if (cancelled) return;
+
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        if (cancelled) return;
+
+        const rendered: PdfPageData[] = [];
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          if (cancelled) return;
+
+          const baseViewport = page.getViewport({ scale: 1 });
+          const scale = 1.5; // render at 1.5x for sharpness, display scaled down via CSS
+          const viewport = page.getViewport({ scale });
+
+          const canvas = document.createElement('canvas');
+          canvas.width = viewport.width;
+          canvas.height = viewport.height;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            await page.render({ canvasContext: ctx, viewport, canvas } as any).promise;
+          }
+          rendered.push({
+            dataUrl: canvas.toDataURL(),
+            width: baseViewport.width,
+            height: baseViewport.height,
+          });
+        }
+
+        if (!cancelled) setPages(rendered);
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load PDF');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [filePath, fetchUrl]);
+
+  // Report page offsets after pages render in DOM
+  useEffect(() => {
+    if (pages.length === 0 || !containerRef.current) return;
+    const wrappers = containerRef.current.querySelectorAll<HTMLElement>('[data-pdf-page]');
+    const offsets = Array.from(wrappers).map((el) => el.offsetTop);
+    onPageOffsetsRef.current?.(offsets);
+  }, [pages]);
 
   if (error) {
     return (
@@ -898,20 +999,30 @@ function PdfView({ filePath }: { filePath: string }) {
     );
   }
 
-  if (!objectUrl) {
-    return (
-      <div className="flex h-full items-center justify-center p-4">
-        <SpinnerGap className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-
   return (
-    <iframe
-      src={objectUrl}
-      className="h-full w-full border-0"
-      title="PDF Preview"
-    />
+    <div ref={containerRef} className="h-full w-full overflow-auto bg-muted/30 p-4">
+      {loading && (
+        <div className="flex h-full items-center justify-center">
+          <SpinnerGap className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      )}
+      {pages.map((page, i) => (
+        <div
+          key={i}
+          data-pdf-page={i + 1}
+          className="mx-auto mb-3"
+          style={{ width: page.width }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={page.dataUrl}
+            alt={`Page ${i + 1}`}
+            className="block w-full rounded shadow-md"
+            style={{ aspectRatio: `${page.width} / ${page.height}` }}
+          />
+        </div>
+      ))}
+    </div>
   );
 }
 

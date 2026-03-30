@@ -216,6 +216,8 @@ const zh: Record<TranslationKey, string> = {
   'feedback.cancel': '取消',
   'feedback.file': '文件',
   'feedback.lineRange': '行号',
+  'feedback.page': '页码',
+  'feedback.pageRange': '页码范围',
 
   // ── Recording ───────────────────────────────────────────────
   'recording.toggleTooltip': '录制交互操作',

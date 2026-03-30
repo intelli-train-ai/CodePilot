@@ -219,6 +219,8 @@ const en = {
   'feedback.cancel': 'Cancel',
   'feedback.file': 'File',
   'feedback.lineRange': 'Lines',
+  'feedback.page': 'Page',
+  'feedback.pageRange': 'Pages',
 
   // ── Recording ───────────────────────────────────────────────
   'recording.toggleTooltip': 'Record interactions',
