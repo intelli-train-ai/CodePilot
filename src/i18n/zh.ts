@@ -203,6 +203,15 @@ const zh: Record<TranslationKey, string> = {
   'filePreview.copyPath': '复制路径',
   'filePreview.failedToLoad': '加载文件失败',
 
+  // ── Feedback ────────────────────────────────────────────────
+  'feedback.toggleTooltip': '反馈模式 — 框选区域截图',
+  'feedback.selectionHint': '拖拽选择区域，然后添加反馈说明',
+  'feedback.placeholder': '描述问题或建议…',
+  'feedback.send': '发送',
+  'feedback.cancel': '取消',
+  'feedback.file': '文件',
+  'feedback.lineRange': '行号',
+
   // ── Doc preview ─────────────────────────────────────────────
   'docPreview.htmlPreview': 'HTML 预览',
   'docPreview.edit': '编辑',

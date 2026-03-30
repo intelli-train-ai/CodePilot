@@ -333,6 +333,26 @@ export function ChatView({ sessionId, initialMessages = [], initialHasMore = fal
     };
   }, []);
 
+  // Listen for feedback from FilePreview region selector
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (!detail?.content || !detail?.screenshot) return;
+
+      const attachment: FileAttachment = {
+        id: `feedback-${Date.now()}`,
+        name: `${detail.fileName || 'feedback'}.png`,
+        type: 'image/png',
+        size: Math.round((detail.screenshot as string).length * 0.75),
+        data: (detail.screenshot as string).replace(/^data:image\/png;base64,/, ''),
+      };
+
+      sendMessageRef.current?.(detail.content, [attachment]);
+    };
+    window.addEventListener('send-feedback-to-chat', handler);
+    return () => window.removeEventListener('send-feedback-to-chat', handler);
+  }, []);
+
   const handleCommand = useChatCommands({ sessionId, messages, setMessages, sendMessage });
 
   return (

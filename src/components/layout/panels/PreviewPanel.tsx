@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { authFetch } from "@/lib/api-client";
 import { useTheme } from "next-themes";
-import { X, Copy, Check, SpinnerGap } from "@/components/ui/icon";
+import { X, Copy, Check, SpinnerGap, ChatCircleText } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import { Light as SyntaxHighlighter } from "react-syntax-highlighter";
 import { useThemeFamily } from "@/lib/theme/context";
@@ -18,6 +18,8 @@ import { useTranslation } from "@/hooks/useTranslation";
 import { useAutoSave } from "@/hooks/useAutoSave";
 import type { SaveStatus } from "@/hooks/useAutoSave";
 import { ResizeHandle } from "@/components/layout/ResizeHandle";
+import { RegionSelector, type SelectionRect } from "@/components/project/RegionSelector";
+import { FeedbackPopover } from "@/components/project/FeedbackPopover";
 import type { FilePreview as FilePreviewType } from "@/types";
 
 const streamdownPlugins = { cjk, code, math, mermaid };
@@ -84,6 +86,7 @@ const PREVIEW_DEFAULT_WIDTH = 480;
 
 export function PreviewPanel() {
   const { resolvedTheme } = useTheme();
+  const { t } = useTranslation();
   const { workingDirectory, previewFile, setPreviewFile, previewViewMode, setPreviewViewMode, setPreviewOpen } = usePanel();
   const isDark = resolvedTheme === "dark";
   const [preview, setPreview] = useState<FilePreviewType | null>(null);
@@ -93,6 +96,15 @@ export function PreviewPanel() {
   const [width, setWidth] = useState(PREVIEW_DEFAULT_WIDTH);
   /** Full file content for editing (loaded without line limit) */
   const [fullContent, setFullContent] = useState<string | null>(null);
+
+  // Feedback mode
+  const [feedbackActive, setFeedbackActive] = useState(false);
+  const [feedbackData, setFeedbackData] = useState<{
+    screenshot: string;
+    selectionRect: SelectionRect;
+    lineRange?: { start: number; end: number };
+  } | null>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
 
   const handleResize = useCallback((delta: number) => {
     // Left-side handle: dragging left (negative delta) = wider
@@ -225,6 +237,102 @@ export function PreviewPanel() {
 
   const canRender = isRenderable(filePath);
 
+  // Reset feedback state when switching files
+  useEffect(() => {
+    setFeedbackActive(false);
+    setFeedbackData(null);
+  }, [filePath]);
+
+  const handleRegionSelect = useCallback(async (rect: SelectionRect, screenRect: DOMRect) => {
+    let screenshot: string | null = null;
+
+    // Try Electron capturePage first
+    const api = (window as unknown as { electronAPI?: { capture?: { region: (r: { x: number; y: number; width: number; height: number }) => Promise<string | null> } } }).electronAPI;
+    if (api?.capture?.region) {
+      try {
+        screenshot = await api.capture.region({ x: screenRect.x, y: screenRect.y, width: screenRect.width, height: screenRect.height });
+      } catch {
+        // Fall through to DOM-based capture
+      }
+    }
+
+    // Fallback: capture from DOM using html-to-image
+    if (!screenshot && contentRef.current) {
+      try {
+        const { toPng } = await import('html-to-image');
+        const dataUrl = await toPng(contentRef.current, {
+          canvasWidth: contentRef.current.scrollWidth,
+          canvasHeight: contentRef.current.scrollHeight,
+          pixelRatio: 2,
+          filter: (node) => {
+            // Exclude the region selector overlay itself
+            if (node instanceof HTMLElement && node.classList?.contains('z-50')) return false;
+            return true;
+          },
+        });
+
+        // Crop to the selected region using a canvas
+        const img = new Image();
+        await new Promise<void>((resolve, reject) => {
+          img.onload = () => resolve();
+          img.onerror = reject;
+          img.src = dataUrl;
+        });
+        const canvas = document.createElement('canvas');
+        const dpr = 2;
+        canvas.width = rect.width * dpr;
+        canvas.height = rect.height * dpr;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          const scrollTop = contentRef.current.scrollTop;
+          ctx.drawImage(
+            img,
+            rect.x * dpr, (rect.y + scrollTop) * dpr,
+            rect.width * dpr, rect.height * dpr,
+            0, 0,
+            rect.width * dpr, rect.height * dpr,
+          );
+          screenshot = canvas.toDataURL('image/png');
+        }
+      } catch (err) {
+        console.error('[Feedback] DOM capture failed:', err);
+      }
+    }
+
+    if (!screenshot) {
+      console.warn('[Feedback] Screenshot capture failed');
+      setFeedbackActive(false);
+      return;
+    }
+
+    // Estimate line range for code files
+    let lineRange: { start: number; end: number } | undefined;
+    if (preview && !imageFile && !pdfFile && !officeFile) {
+      const LINE_HEIGHT = 16.5;
+      const PADDING_TOP = 8;
+      const scrollTop = contentRef.current?.scrollTop ?? 0;
+      const adjustedY = rect.y + scrollTop - PADDING_TOP;
+      const startLine = Math.max(1, Math.floor(adjustedY / LINE_HEIGHT) + 1);
+      const endLine = Math.min(preview.line_count, Math.ceil((adjustedY + rect.height) / LINE_HEIGHT) + 1);
+      lineRange = { start: startLine, end: endLine };
+    }
+
+    setFeedbackData({ screenshot, selectionRect: rect, lineRange });
+  }, [preview, imageFile, pdfFile, officeFile]);
+
+  const handleFeedbackSend = useCallback((context: string, screenshot: string, fName: string) => {
+    window.dispatchEvent(new CustomEvent('send-feedback-to-chat', {
+      detail: { content: context, screenshot, fileName: fName },
+    }));
+    setFeedbackData(null);
+    setFeedbackActive(false);
+  }, []);
+
+  const handleFeedbackCancel = useCallback(() => {
+    setFeedbackData(null);
+    if (!feedbackData) setFeedbackActive(false);
+  }, [feedbackData]);
+
   return (
     <div className="flex h-full shrink-0 overflow-hidden">
       <ResizeHandle side="left" onResize={handleResize} />
@@ -250,6 +358,15 @@ export function PreviewPanel() {
           </Button>
         )}
 
+        <Button
+          variant={feedbackActive ? "default" : "ghost"}
+          size="icon-sm"
+          onClick={() => { setFeedbackActive(!feedbackActive); setFeedbackData(null); }}
+          title={t('feedback.toggleTooltip')}
+        >
+          <ChatCircleText size={14} />
+        </Button>
+
         <Button variant="ghost" size="icon-sm" onClick={handleClose}>
           <X size={14} />
           <span className="sr-only">Close preview</span>
@@ -272,8 +389,15 @@ export function PreviewPanel() {
         ) : null}
       </div>
 
+      {/* Feedback hint */}
+      {feedbackActive && !feedbackData && (
+        <div className="mx-3 mb-1 rounded-md bg-primary/10 px-2 py-1 text-[10px] text-primary">
+          {t('feedback.selectionHint')}
+        </div>
+      )}
+
       {/* Content */}
-      <div className="flex-1 min-h-0 overflow-auto">
+      <div className="relative flex-1 min-h-0 overflow-auto" ref={contentRef}>
         {imageFile ? (
           <ImageView filePath={filePath} />
         ) : pdfFile ? (
@@ -324,6 +448,26 @@ export function PreviewPanel() {
             <SourceView preview={preview} isDark={isDark} />
           )
         ) : null}
+
+        {/* Region selector overlay */}
+        <RegionSelector
+          containerRef={contentRef}
+          active={feedbackActive && !feedbackData}
+          onSelect={handleRegionSelect}
+          onCancel={() => setFeedbackActive(false)}
+        />
+
+        {/* Feedback popover */}
+        {feedbackData && (
+          <FeedbackPopover
+            screenshot={feedbackData.screenshot}
+            filePath={filePath}
+            lineRange={feedbackData.lineRange}
+            anchorRect={feedbackData.selectionRect}
+            onSend={handleFeedbackSend}
+            onCancel={handleFeedbackCancel}
+          />
+        )}
       </div>
       </div>
     </div>

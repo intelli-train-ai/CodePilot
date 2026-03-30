@@ -29,6 +29,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   bridge: {
     isActive: () => ipcRenderer.invoke('bridge:is-active'),
   },
+  capture: {
+    region: (rect: { x: number; y: number; width: number; height: number }) =>
+      ipcRenderer.invoke('capture:region', rect),
+  },
   terminal: {
     create: (opts: { id: string; cwd: string; cols: number; rows: number }) =>
       ipcRenderer.invoke('terminal:create', opts),

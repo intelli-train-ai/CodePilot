@@ -206,6 +206,15 @@ const en = {
   'filePreview.copyPath': 'Copy path',
   'filePreview.failedToLoad': 'Failed to load file',
 
+  // ── Feedback ────────────────────────────────────────────────
+  'feedback.toggleTooltip': 'Feedback mode — select a region to screenshot',
+  'feedback.selectionHint': 'Drag to select a region, then add your feedback',
+  'feedback.placeholder': 'Describe the issue or suggestion…',
+  'feedback.send': 'Send',
+  'feedback.cancel': 'Cancel',
+  'feedback.file': 'File',
+  'feedback.lineRange': 'Lines',
+
   // ── Doc preview ─────────────────────────────────────────────
   'docPreview.htmlPreview': 'HTML Preview',
   'docPreview.edit': 'Edit',
