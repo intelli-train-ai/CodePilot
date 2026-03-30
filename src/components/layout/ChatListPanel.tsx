@@ -25,6 +25,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
@@ -69,6 +79,8 @@ export function ChatListPanel({ open, width, hasUpdate, readyToInstall }: ChatLi
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [hoveredSession, setHoveredSession] = useState<string | null>(null);
   const [deletingSession, setDeletingSession] = useState<string | null>(null);
+  const [confirmDeleteSessionId, setConfirmDeleteSessionId] = useState<string | null>(null);
+  const [confirmRemoveProject, setConfirmRemoveProject] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchDialogOpen, setSearchDialogOpen] = useState(false);
   const [expandedSessionGroups, setExpandedSessionGroups] = useState<Set<string>>(new Set());
@@ -263,13 +275,17 @@ export function ChatListPanel({ open, width, hasUpdate, readyToInstall }: ChatLi
     return () => clearInterval(interval);
   }, [fetchSessions]);
 
-  const handleDeleteSession = async (
+  const handleDeleteSessionClick = (
     e: React.MouseEvent,
     sessionId: string
   ) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!confirm("Delete this conversation?")) return;
+    setConfirmDeleteSessionId(sessionId);
+  };
+
+  const handleDeleteSessionConfirm = async (sessionId: string) => {
+    setConfirmDeleteSessionId(null);
     setDeletingSession(sessionId);
     try {
       const res = await authFetch(`/api/chat/sessions/${sessionId}`, {
@@ -310,8 +326,12 @@ export function ChatListPanel({ open, width, hasUpdate, readyToInstall }: ChatLi
     }
   };
 
-  const handleRemoveProject = async (workingDirectory: string) => {
-    if (!confirm(`Remove project "${workingDirectory.split('/').pop()}" and all its conversations?`)) return;
+  const handleRemoveProjectClick = (workingDirectory: string) => {
+    setConfirmRemoveProject(workingDirectory);
+  };
+
+  const handleRemoveProjectConfirm = async (workingDirectory: string) => {
+    setConfirmRemoveProject(null);
     const projectSessions = sessions.filter((s) => s.working_directory === workingDirectory);
     const deletedIds = new Set<string>();
     for (const session of projectSessions) {
@@ -549,7 +569,7 @@ export function ChatListPanel({ open, width, hasUpdate, readyToInstall }: ChatLi
                     onToggle={() => toggleProject(group.workingDirectory)}
                     onMouseEnter={() => setHoveredFolder(group.workingDirectory)}
                     onMouseLeave={() => setHoveredFolder(null)}
-                    onRemoveProject={handleRemoveProject}
+                    onRemoveProject={handleRemoveProjectClick}
                   />
 
                   {/* Session items with animated collapse */}
@@ -581,7 +601,7 @@ export function ChatListPanel({ open, width, hasUpdate, readyToInstall }: ChatLi
                                 t={t}
                                 onMouseEnter={() => setHoveredSession(session.id)}
                                 onMouseLeave={() => setHoveredSession(null)}
-                                onDelete={handleDeleteSession}
+                                onDelete={handleDeleteSessionClick}
                                 onRename={handleRenameSession}
                                 onAddToSplit={(s) => addToSplit({
                                   sessionId: s.id,
@@ -708,6 +728,54 @@ export function ChatListPanel({ open, width, hasUpdate, readyToInstall }: ChatLi
         onOpenChange={setFolderPickerOpen}
         onSelect={handleFolderSelect}
       />
+
+      {/* Delete conversation confirm */}
+      <AlertDialog
+        open={!!confirmDeleteSessionId}
+        onOpenChange={(open) => { if (!open) setConfirmDeleteSessionId(null); }}
+      >
+        <AlertDialogContent size="sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('chatList.deleteConversation')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('chatList.deleteConversationConfirm')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={() => confirmDeleteSessionId && handleDeleteSessionConfirm(confirmDeleteSessionId)}
+            >
+              {t('common.delete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Remove project confirm */}
+      <AlertDialog
+        open={!!confirmRemoveProject}
+        onOpenChange={(open) => { if (!open) setConfirmRemoveProject(null); }}
+      >
+        <AlertDialogContent size="sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('chatList.removeProject')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('chatList.removeProjectConfirm', { project: confirmRemoveProject?.split('/').pop() ?? '' })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={() => confirmRemoveProject && handleRemoveProjectConfirm(confirmRemoveProject)}
+            >
+              {t('common.delete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
     </aside>
   );
