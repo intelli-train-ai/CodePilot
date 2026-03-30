@@ -1067,6 +1067,8 @@ const zh: Record<TranslationKey, string> = {
   'cliTools.path': '路径',
   'cliTools.brewNotInstalled': '未检测到 Homebrew',
   'cliTools.brewInstallGuide': '大部分推荐工具依赖 Homebrew 安装，请先在终端中运行以下命令安装：',
+  'cliTools.noPkgManager': '未检测到包管理器',
+  'cliTools.noPkgManagerGuide': '未找到支持的包管理器（apt、brew），请手动安装工具或配置包管理器。',
   'cliTools.viewDocs': '查看 CodePilot 官方文档',
   'cliTools.searchPlaceholder': '搜索 CLI 工具...',
   'cliTools.noToolsDetected': '还没有检测到已安装的 CLI 工具',

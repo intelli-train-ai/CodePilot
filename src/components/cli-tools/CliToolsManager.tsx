@@ -25,6 +25,7 @@ export function CliToolsManager() {
   const [extraDetected, setExtraDetected] = useState<CliToolRuntimeInfo[]>([]);
   const [platform, setPlatform] = useState<string>('');
   const [hasBrew, setHasBrew] = useState(true);
+  const [hasApt, setHasApt] = useState(false);
   const [loading, setLoading] = useState(true);
   const [autoDescriptions, setAutoDescriptions] = useState<AutoDescCache>({});
   const [customTools, setCustomTools] = useState<CustomCliTool[]>([]);
@@ -48,6 +49,7 @@ export function CliToolsManager() {
       setExtraDetected(installedData.extra || []);
       setPlatform(installedData.platform || '');
       setHasBrew(installedData.hasBrew !== false);
+      setHasApt(installedData.hasApt === true);
       setCustomTools(installedData.custom || []);
 
       // Load descriptions from DB (returned by installed API)
@@ -342,8 +344,8 @@ export function CliToolsManager() {
       <section>
         <h2 className="text-sm font-medium text-muted-foreground mb-3">{t('cliTools.recommended')}</h2>
 
-        {/* Brew not installed warning */}
-        {!hasBrew && (platform === 'darwin' || platform === 'linux') && (
+        {/* Package manager not installed warning — skip on Linux with apt */}
+        {!hasBrew && platform === 'darwin' && (
           <div className="flex items-start gap-2 rounded-lg border border-status-warning-border bg-status-warning-muted px-3 py-2.5 mb-3">
             <Warning size={16} className="text-status-warning-foreground shrink-0 mt-0.5" />
             <div className="text-xs text-muted-foreground">
@@ -352,6 +354,15 @@ export function CliToolsManager() {
               <code className="block mt-1.5 bg-muted/50 rounded px-2 py-1 text-[11px] font-mono select-all">
                 /bin/bash -c &quot;$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)&quot;
               </code>
+            </div>
+          </div>
+        )}
+        {platform === 'linux' && !hasApt && !hasBrew && (
+          <div className="flex items-start gap-2 rounded-lg border border-status-warning-border bg-status-warning-muted px-3 py-2.5 mb-3">
+            <Warning size={16} className="text-status-warning-foreground shrink-0 mt-0.5" />
+            <div className="text-xs text-muted-foreground">
+              <p className="font-medium text-foreground mb-1">{t('cliTools.noPkgManager')}</p>
+              <p>{t('cliTools.noPkgManagerGuide')}</p>
             </div>
           </div>
         )}

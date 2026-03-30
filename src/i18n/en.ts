@@ -1070,6 +1070,8 @@ const en = {
   'cliTools.path': 'Path',
   'cliTools.brewNotInstalled': 'Homebrew not detected',
   'cliTools.brewInstallGuide': 'Most recommended tools require Homebrew. Run this command in your terminal to install it:',
+  'cliTools.noPkgManager': 'No package manager detected',
+  'cliTools.noPkgManagerGuide': 'No supported package manager (apt, brew) was found. Please install tools manually or set up a package manager.',
   'cliTools.viewDocs': 'View CodePilot documentation',
   'cliTools.searchPlaceholder': 'Search CLI tools...',
   'cliTools.noToolsDetected': 'No installed CLI tools detected',

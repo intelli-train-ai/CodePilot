@@ -1033,7 +1033,7 @@ export interface ClaudeStreamOptions {
 
 export type CliToolStatus = 'not_installed' | 'installed' | 'needs_auth' | 'ready';
 export type CliToolCategory = 'media' | 'data' | 'search' | 'download' | 'document' | 'productivity';
-export type InstallMethod = 'brew' | 'npm' | 'pipx' | 'cargo';
+export type InstallMethod = 'brew' | 'apt' | 'npm' | 'pipx' | 'cargo';
 
 export type CliToolPlatform = 'darwin' | 'linux' | 'win32';
 

@@ -22,14 +22,24 @@ async function detectBrew(): Promise<boolean> {
   }
 }
 
+async function detectApt(): Promise<boolean> {
+  try {
+    await execFileAsync('/usr/bin/which', ['apt'], { timeout: 3000 });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function GET(request: NextRequest) {
   const authError = requireAuth(request);
   if (authError) return authError;
 
   try {
-    const [{ catalog, extra }, hasBrew] = await Promise.all([
+    const [{ catalog, extra }, hasBrew, hasApt] = await Promise.all([
       detectAllCliTools(),
       detectBrew(),
+      detectApt(),
     ]);
     const descriptions = getAllCliToolDescriptions();
     const allCustom = getAllCustomCliTools();
@@ -44,6 +54,7 @@ export async function GET(request: NextRequest) {
       descriptions,
       platform: process.platform,
       hasBrew,
+      hasApt,
     });
   } catch (error) {
     console.error('[cli-tools/installed] Error:', error);
