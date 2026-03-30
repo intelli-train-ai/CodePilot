@@ -742,6 +742,22 @@ export interface FileAttachment {
   filePath?: string; // persisted disk path (for messages reloaded from DB)
 }
 
+// --- Interaction recording types ---
+
+export type RecordedEvent =
+  | { type: 'click';    ts: number; target: string; text: string; x: number; y: number }
+  | { type: 'input';    ts: number; target: string; value: string }
+  | { type: 'scroll';   ts: number; scrollX: number; scrollY: number }
+  | { type: 'navigate'; ts: number; url: string }
+  | { type: 'note';     ts: number; text: string }
+  | { type: 'snapshot'; ts: number; screenshot: string };
+
+export interface RecordingSession {
+  filePath: string;
+  startedAt: number;
+  events: RecordedEvent[];
+}
+
 // Check if a MIME type is an image
 export function isImageFile(type: string): boolean {
   return type.startsWith('image/');

@@ -333,21 +333,27 @@ export function ChatView({ sessionId, initialMessages = [], initialHasMore = fal
     };
   }, []);
 
-  // Listen for feedback from FilePreview region selector
+  // Listen for feedback from FilePreview region selector and recording panel
   useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent).detail;
-      if (!detail?.content || !detail?.screenshot) return;
+      if (!detail?.content) return;
 
-      const attachment: FileAttachment = {
-        id: `feedback-${Date.now()}`,
-        name: `${detail.fileName || 'feedback'}.png`,
-        type: 'image/png',
-        size: Math.round((detail.screenshot as string).length * 0.75),
-        data: (detail.screenshot as string).replace(/^data:image\/png;base64,/, ''),
-      };
+      // Support pre-built attachments array (from recording) or single screenshot
+      let attachments: FileAttachment[] = [];
+      if (detail.attachments && Array.isArray(detail.attachments)) {
+        attachments = detail.attachments;
+      } else if (detail.screenshot) {
+        attachments = [{
+          id: `feedback-${Date.now()}`,
+          name: `${detail.fileName || 'feedback'}.png`,
+          type: 'image/png',
+          size: Math.round((detail.screenshot as string).length * 0.75),
+          data: (detail.screenshot as string).replace(/^data:image\/png;base64,/, ''),
+        }];
+      }
 
-      sendMessageRef.current?.(detail.content, [attachment]);
+      sendMessageRef.current?.(detail.content, attachments.length > 0 ? attachments : undefined);
     };
     window.addEventListener('send-feedback-to-chat', handler);
     return () => window.removeEventListener('send-feedback-to-chat', handler);

@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { authFetch } from "@/lib/api-client";
 import { useTheme } from "next-themes";
-import { X, Copy, Check, SpinnerGap, ChatCircleText } from "@/components/ui/icon";
+import { X, Copy, Check, SpinnerGap, ChatCircleText, Circle } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import { Light as SyntaxHighlighter } from "react-syntax-highlighter";
 import { useThemeFamily } from "@/lib/theme/context";
@@ -20,7 +20,8 @@ import type { SaveStatus } from "@/hooks/useAutoSave";
 import { ResizeHandle } from "@/components/layout/ResizeHandle";
 import { RegionSelector, type SelectionRect } from "@/components/project/RegionSelector";
 import { FeedbackPopover } from "@/components/project/FeedbackPopover";
-import type { FilePreview as FilePreviewType } from "@/types";
+import { RecordingPanel } from "@/components/project/RecordingPanel";
+import type { FilePreview as FilePreviewType, RecordedEvent, RecordingSession, FileAttachment } from "@/types";
 
 const streamdownPlugins = { cjk, code, math, mermaid };
 
@@ -106,6 +107,11 @@ export function PreviewPanel() {
   } | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
+  // Recording mode (HTML files only)
+  const [recordingActive, setRecordingActive] = useState(false);
+  const [recordingSession, setRecordingSession] = useState<RecordingSession | null>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+
   const handleResize = useCallback((delta: number) => {
     // Left-side handle: dragging left (negative delta) = wider
     setWidth((w) => Math.min(PREVIEW_MAX_WIDTH, Math.max(PREVIEW_MIN_WIDTH, w - delta)));
@@ -116,6 +122,7 @@ export function PreviewPanel() {
   const pdfFile = isPdf(filePath);
   const officeFile = isOffice(filePath);
   const editable = isEditable(filePath);
+  const htmlFile = isHtml(filePath);
   const [officeHtml, setOfficeHtml] = useState<string | null>(null);
 
   // Load full content when entering edit mode
@@ -333,6 +340,130 @@ export function PreviewPanel() {
     if (!feedbackData) setFeedbackActive(false);
   }, [feedbackData]);
 
+  // --- Recording handlers ---
+
+  const startRecording = useCallback(() => {
+    setRecordingActive(true);
+    setRecordingSession({ filePath, startedAt: Date.now(), events: [] });
+  }, [filePath]);
+
+  const stopRecording = useCallback(() => {
+    setRecordingActive(false);
+  }, []);
+
+  const discardRecording = useCallback(() => {
+    setRecordingActive(false);
+    setRecordingSession(null);
+  }, []);
+
+  const addRecordingNote = useCallback((text: string) => {
+    setRecordingSession((prev) => {
+      if (!prev) return prev;
+      const event: RecordedEvent = { type: 'note', ts: Date.now() - prev.startedAt, text };
+      return { ...prev, events: [...prev.events, event] };
+    });
+  }, []);
+
+  const takeSnapshot = useCallback(async () => {
+    if (!contentRef.current) return;
+    // Use Electron capture or html-to-image fallback
+    const api = (window as unknown as { electronAPI?: { capture?: { region: (r: { x: number; y: number; width: number; height: number }) => Promise<string | null> } } }).electronAPI;
+    const box = contentRef.current.getBoundingClientRect();
+    let screenshot: string | null = null;
+    if (api?.capture?.region) {
+      try {
+        screenshot = await api.capture.region({ x: box.x, y: box.y, width: box.width, height: box.height });
+      } catch { /* fallback */ }
+    }
+    if (!screenshot) {
+      try {
+        const { toPng } = await import('html-to-image');
+        screenshot = await toPng(contentRef.current, { pixelRatio: 2 });
+      } catch { /* skip */ }
+    }
+    if (!screenshot) return;
+    setRecordingSession((prev) => {
+      if (!prev) return prev;
+      const event: RecordedEvent = { type: 'snapshot', ts: Date.now() - prev.startedAt, screenshot: screenshot! };
+      return { ...prev, events: [...prev.events, event] };
+    });
+  }, []);
+
+  const sendRecording = useCallback((summary: string) => {
+    if (!recordingSession) return;
+
+    const events = recordingSession.events;
+    const duration = events.length > 0 ? events[events.length - 1].ts : 0;
+
+    // Build structured message
+    const lines: string[] = [
+      `📎 ${t('feedback.file')}: ${recordingSession.filePath}`,
+      `⏱ ${t('recording.duration')}: ${Math.round(duration / 1000)}s`,
+      `📋 ${t('recording.interactionSequence')} (${events.filter(e => e.type !== 'snapshot').length} ${t('recording.steps')}):`,
+    ];
+
+    let stepNum = 0;
+    for (const event of events) {
+      if (event.type === 'snapshot') continue;
+      stepNum++;
+      const ts = `[${Math.floor(event.ts / 1000 / 60)}:${(Math.floor(event.ts / 1000) % 60).toString().padStart(2, '0')}]`;
+      switch (event.type) {
+        case 'click': lines.push(`  ${stepNum}. ${ts} 🖱 click ${event.target} "${event.text}"`); break;
+        case 'input': lines.push(`  ${stepNum}. ${ts} ⌨ input ${event.target} → "${event.value.slice(0, 50)}"`); break;
+        case 'scroll': lines.push(`  ${stepNum}. ${ts} 📜 scroll → y=${event.scrollY}`); break;
+        case 'navigate': lines.push(`  ${stepNum}. ${ts} 🔗 navigate → ${event.url}`); break;
+        case 'note': lines.push(`  ${stepNum}. ${ts} 📝 ${event.text}`); break;
+      }
+    }
+
+    if (summary) {
+      lines.push('---', summary);
+    }
+
+    // Collect screenshot attachments (max 5)
+    const snapshots = events.filter((e): e is Extract<RecordedEvent, { type: 'snapshot' }> => e.type === 'snapshot').slice(0, 5);
+    const attachments: FileAttachment[] = snapshots.map((snap, i) => ({
+      id: `recording-snap-${Date.now()}-${i}`,
+      name: `recording-${i + 1}.png`,
+      type: 'image/png',
+      size: Math.round(snap.screenshot.length * 0.75),
+      data: snap.screenshot.replace(/^data:image\/png;base64,/, ''),
+    }));
+
+    window.dispatchEvent(new CustomEvent('send-feedback-to-chat', {
+      detail: {
+        content: lines.join('\n'),
+        screenshot: attachments.length > 0 ? attachments[0].data : undefined,
+        fileName: filePath.split('/').pop() || 'recording',
+        attachments,
+      },
+    }));
+
+    setRecordingActive(false);
+    setRecordingSession(null);
+  }, [recordingSession, filePath, t]);
+
+  // Listen for recorder events from iframe postMessage
+  useEffect(() => {
+    if (!recordingActive) return;
+    const handler = (e: MessageEvent) => {
+      if (e.data?.type !== 'recorder-event' || !e.data.event) return;
+      const event = e.data.event as RecordedEvent;
+      setRecordingSession((prev) => {
+        if (!prev) return prev;
+        return { ...prev, events: [...prev.events, event] };
+      });
+    };
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
+  }, [recordingActive]);
+
+  // Reset recording when switching files
+  useEffect(() => {
+    setRecordingActive(false);
+    setRecordingSession(null);
+  }, [filePath]);
+
   return (
     <div className="flex h-full shrink-0 overflow-hidden">
       <ResizeHandle side="left" onResize={handleResize} />
@@ -358,14 +489,33 @@ export function PreviewPanel() {
           </Button>
         )}
 
-        <Button
-          variant={feedbackActive ? "default" : "ghost"}
-          size="icon-sm"
-          onClick={() => { setFeedbackActive(!feedbackActive); setFeedbackData(null); }}
-          title={t('feedback.toggleTooltip')}
-        >
-          <ChatCircleText size={14} />
-        </Button>
+        {/* Recording button — HTML files only */}
+        {htmlFile && (
+          <Button
+            variant={recordingActive || recordingSession ? "default" : "ghost"}
+            size="icon-sm"
+            onClick={() => {
+              if (recordingActive) { stopRecording(); }
+              else if (recordingSession) { /* already stopped, panel visible */ }
+              else { startRecording(); }
+            }}
+            title={t('recording.toggleTooltip')}
+          >
+            <Circle size={14} weight={recordingActive ? "fill" : "regular"} className={recordingActive ? "text-destructive" : ""} />
+          </Button>
+        )}
+
+        {/* Feedback button — non-HTML files */}
+        {!htmlFile && (
+          <Button
+            variant={feedbackActive ? "default" : "ghost"}
+            size="icon-sm"
+            onClick={() => { setFeedbackActive(!feedbackActive); setFeedbackData(null); }}
+            title={t('feedback.toggleTooltip')}
+          >
+            <ChatCircleText size={14} />
+          </Button>
+        )}
 
         <Button variant="ghost" size="icon-sm" onClick={handleClose}>
           <X size={14} />
@@ -443,22 +593,33 @@ export function PreviewPanel() {
           )
         ) : preview ? (
           previewViewMode === "rendered" && canRender ? (
-            <RenderedView content={preview.content} filePath={filePath} workingDirectory={workingDirectory} />
+            htmlFile ? (
+              <InteractiveHtmlView
+                ref={iframeRef}
+                filePath={filePath}
+                workingDirectory={workingDirectory}
+                recording={recordingActive}
+              />
+            ) : (
+              <RenderedView content={preview.content} filePath={filePath} workingDirectory={workingDirectory} />
+            )
           ) : (
             <SourceView preview={preview} isDark={isDark} />
           )
         ) : null}
 
-        {/* Region selector overlay */}
-        <RegionSelector
-          containerRef={contentRef}
-          active={feedbackActive && !feedbackData}
-          onSelect={handleRegionSelect}
-          onCancel={() => setFeedbackActive(false)}
-        />
+        {/* Region selector overlay (non-HTML files) */}
+        {!htmlFile && (
+          <RegionSelector
+            containerRef={contentRef}
+            active={feedbackActive && !feedbackData}
+            onSelect={handleRegionSelect}
+            onCancel={() => setFeedbackActive(false)}
+          />
+        )}
 
-        {/* Feedback popover */}
-        {feedbackData && (
+        {/* Feedback popover (non-HTML files) */}
+        {!htmlFile && feedbackData && (
           <FeedbackPopover
             screenshot={feedbackData.screenshot}
             filePath={filePath}
@@ -469,6 +630,19 @@ export function PreviewPanel() {
           />
         )}
       </div>
+
+      {/* Recording panel (HTML files) */}
+      {htmlFile && recordingSession && (
+        <RecordingPanel
+          recording={recordingActive}
+          session={recordingSession}
+          onStop={stopRecording}
+          onDiscard={discardRecording}
+          onAddNote={addRecordingNote}
+          onSnapshot={takeSnapshot}
+          onSend={sendRecording}
+        />
+      )}
       </div>
     </div>
   );
@@ -946,3 +1120,38 @@ function RenderedView({
     </div>
   );
 }
+
+/** Interactive HTML preview — served via HTTP for full JS/CSS support */
+import { forwardRef } from "react";
+import { getStoredAuthToken } from "@/components/auth/TokenGate";
+
+const InteractiveHtmlView = forwardRef<
+  HTMLIFrameElement,
+  { filePath: string; workingDirectory: string; recording: boolean }
+>(function InteractiveHtmlView({ filePath, workingDirectory, recording }, ref) {
+  const token = getStoredAuthToken();
+  const root = workingDirectory || filePath.substring(0, filePath.lastIndexOf("/"));
+  // Make path relative to root
+  const resolvedRoot = root.endsWith("/") ? root : root + "/";
+  const relativePath = filePath.startsWith(resolvedRoot)
+    ? filePath.slice(resolvedRoot.length)
+    : filePath.split("/").pop() || filePath;
+
+  const params = new URLSearchParams({
+    root,
+    path: relativePath,
+    ...(recording ? { record: "1" } : {}),
+    ...(token ? { token } : {}),
+  });
+  const src = `/api/files/serve?${params.toString()}`;
+
+  return (
+    <iframe
+      ref={ref}
+      src={src}
+      sandbox="allow-scripts allow-forms allow-popups allow-modals allow-same-origin"
+      className="h-full w-full border-0"
+      title="Interactive HTML Preview"
+    />
+  );
+});

@@ -215,6 +215,21 @@ const en = {
   'feedback.file': 'File',
   'feedback.lineRange': 'Lines',
 
+  // ── Recording ───────────────────────────────────────────────
+  'recording.toggleTooltip': 'Record interactions',
+  'recording.recording': 'Recording',
+  'recording.stopped': 'Recording stopped',
+  'recording.events': 'events',
+  'recording.snapshot': 'Screenshot',
+  'recording.addNote': 'Note',
+  'recording.stop': 'Stop',
+  'recording.discard': 'Discard',
+  'recording.notePlaceholder': 'Add a note about this interaction…',
+  'recording.summaryPlaceholder': 'Overall feedback…',
+  'recording.duration': 'Duration',
+  'recording.interactionSequence': 'Interaction sequence',
+  'recording.steps': 'steps',
+
   // ── Doc preview ─────────────────────────────────────────────
   'docPreview.htmlPreview': 'HTML Preview',
   'docPreview.edit': 'Edit',

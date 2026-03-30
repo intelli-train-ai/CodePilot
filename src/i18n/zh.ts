@@ -212,6 +212,21 @@ const zh: Record<TranslationKey, string> = {
   'feedback.file': '文件',
   'feedback.lineRange': '行号',
 
+  // ── Recording ───────────────────────────────────────────────
+  'recording.toggleTooltip': '录制交互操作',
+  'recording.recording': '录制中',
+  'recording.stopped': '录制已停止',
+  'recording.events': '个事件',
+  'recording.snapshot': '截图',
+  'recording.addNote': '备注',
+  'recording.stop': '停止',
+  'recording.discard': '丢弃',
+  'recording.notePlaceholder': '添加关于此交互的备注…',
+  'recording.summaryPlaceholder': '整体反馈…',
+  'recording.duration': '时长',
+  'recording.interactionSequence': '交互序列',
+  'recording.steps': '步',
+
   // ── Doc preview ─────────────────────────────────────────────
   'docPreview.htmlPreview': 'HTML 预览',
   'docPreview.edit': '编辑',
