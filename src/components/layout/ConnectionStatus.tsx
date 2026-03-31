@@ -166,7 +166,7 @@ export function ConnectionStatus() {
         size="sm"
         onClick={() => setDialogOpen(true)}
         className={cn(
-          "h-7 rounded-full px-2.5 text-[11px] font-medium gap-1.5",
+          "h-8 rounded-full px-2.5 text-xs font-medium gap-1.5",
           status === null
             ? "bg-muted text-muted-foreground"
             : connected

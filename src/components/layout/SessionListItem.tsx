@@ -68,7 +68,7 @@ export function SessionListItem({
       <Link
         href={`/chat/${session.id}`}
         className={cn(
-          "flex items-center gap-1.5 rounded-md pl-2 pr-2 py-1.5 transition-all duration-150 min-w-0",
+          "flex items-center gap-1.5 rounded-md pl-2 pr-2 py-2 transition-all duration-150 min-w-0",
           isActive
             ? "bg-sidebar-accent text-sidebar-accent-foreground"
             : "text-sidebar-foreground hover:bg-accent/50"
@@ -109,7 +109,7 @@ export function SessionListItem({
             variant="ghost"
             size="icon"
             className={cn(
-              "absolute right-2 top-1/2 -translate-y-1/2 z-10 flex items-center justify-center text-muted-foreground/60 hover:text-foreground transition-opacity h-5 w-5 p-0",
+              "absolute right-1 top-1/2 -translate-y-1/2 z-10 flex items-center justify-center text-muted-foreground/60 hover:text-foreground transition-opacity h-7 w-7 p-0",
               showActions ? "opacity-100" : "opacity-0 pointer-events-none"
             )}
             onPointerDown={(e) => e.stopPropagation()}

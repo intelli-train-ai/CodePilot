@@ -506,7 +506,7 @@ export function ChatListPanel({ open, width, hasUpdate, readyToInstall }: ChatLi
         <Button
           variant="ghost"
           size="sm"
-          className="h-7 gap-1 px-1.5 text-[11px] text-muted-foreground/60 hover:text-foreground"
+          className="h-8 gap-1 px-2 text-xs text-muted-foreground/60 hover:text-foreground"
           onClick={() => openFolderPicker()}
         >
           <FolderPlus size={12} />
