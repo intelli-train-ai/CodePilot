@@ -171,8 +171,9 @@ export function CliToolsManager() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
+      <div className="flex flex-col items-center justify-center gap-3 py-12">
         <SpinnerGap size={24} className="animate-spin text-muted-foreground" />
+        <span className="text-sm text-muted-foreground">{t('cliTools.loading' as TranslationKey)}</span>
       </div>
     );
   }

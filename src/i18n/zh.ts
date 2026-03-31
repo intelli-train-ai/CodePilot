@@ -1057,6 +1057,7 @@ const zh: Record<TranslationKey, string> = {
   'cliTools.installing': '安装中',
   'cliTools.installSuccess': '安装完成',
   'cliTools.installFailed': '安装失败',
+  'cliTools.loading': '加载 CLI 工具中…',
   'cliTools.detail': '详情',
   'cliTools.detailIntro': '工具简介',
   'cliTools.useCases': '适用场景',

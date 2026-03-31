@@ -1060,6 +1060,7 @@ const en = {
   'cliTools.installing': 'Installing',
   'cliTools.installSuccess': 'Installation Complete',
   'cliTools.installFailed': 'Installation Failed',
+  'cliTools.loading': 'Loading CLI tools…',
   'cliTools.detail': 'Details',
   'cliTools.detailIntro': 'Introduction',
   'cliTools.useCases': 'Use Cases',
