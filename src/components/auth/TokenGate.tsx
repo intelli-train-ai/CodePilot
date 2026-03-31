@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useTranslation } from '@/hooks/useTranslation';
-import { Lock, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { Lock, Eye, EyeSlash, WarningCircle } from '@phosphor-icons/react';
 
 interface TokenGateProps {
   onAuthenticated: (token: string) => void;
@@ -101,12 +101,12 @@ export function TokenGate({ onAuthenticated }: TokenGateProps) {
                 onClick={() => setShowToken(!showToken)}
                 tabIndex={-1}
               >
-                {showToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                {showToken ? <EyeSlash className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
             {error && (
               <div className="flex items-center gap-1.5 text-sm text-destructive">
-                <AlertCircle className="h-3.5 w-3.5 flex-shrink-0" />
+                <WarningCircle className="h-3.5 w-3.5 flex-shrink-0" />
                 <span>{error}</span>
               </div>
             )}

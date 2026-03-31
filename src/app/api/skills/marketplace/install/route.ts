@@ -24,7 +24,6 @@ export async function POST(request: NextRequest) {
 
     const child = spawn("npx", args, {
       env: { ...process.env },
-      shell: true,
     });
 
     const encoder = new TextEncoder();

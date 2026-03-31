@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import fs from 'fs/promises';
 import path from 'path';
+import { requireAuth } from '@/lib/auth';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -17,6 +18,9 @@ export const dynamic = 'force-dynamic';
  * Returns 302 redirect to /api/files/raw?path=<resolved> on success, or 404.
  */
 export async function GET(request: NextRequest) {
+  const authError = requireAuth(request);
+  if (authError) return authError;
+
   const src = request.nextUrl.searchParams.get('src');
   const mdFile = request.nextUrl.searchParams.get('mdFile');
   const workDir = request.nextUrl.searchParams.get('workDir');

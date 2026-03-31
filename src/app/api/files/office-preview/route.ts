@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
+import { requireAuth } from '@/lib/auth';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -13,6 +14,9 @@ const OFFICE_EXTENSIONS = new Set(['.docx', '.xlsx', '.pptx', '.doc', '.xls', '.
  * PDF is handled client-side via iframe + /api/files/raw.
  */
 export async function GET(request: NextRequest) {
+  const authError = requireAuth(request);
+  if (authError) return authError;
+
   const filePath = request.nextUrl.searchParams.get('path');
   const baseDir = request.nextUrl.searchParams.get('baseDir');
 
@@ -76,18 +80,26 @@ async function convertDocx(filePath: string): Promise<string> {
 }
 
 async function convertXlsx(filePath: string): Promise<string> {
-  const XLSX = await import('xlsx');
-  const buffer = await fs.readFile(filePath);
-  const workbook = XLSX.read(buffer, { type: 'buffer' });
+  const ExcelJS = await import('exceljs');
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.readFile(filePath);
 
   const sheets: string[] = [];
-  for (const sheetName of workbook.SheetNames) {
-    const sheet = workbook.Sheets[sheetName];
-    const html = XLSX.utils.sheet_to_html(sheet, { id: `sheet-${sheetName}` });
+  workbook.eachSheet((worksheet) => {
+    let html = `<table id="sheet-${escapeHtml(worksheet.name)}" style="border-collapse:collapse;width:100%;">`;
+    worksheet.eachRow((row) => {
+      html += '<tr>';
+      row.eachCell({ includeEmpty: true }, (cell) => {
+        const value = cell.text ?? '';
+        html += `<td style="border:1px solid #e5e7eb;padding:4px 8px;">${escapeHtml(String(value))}</td>`;
+      });
+      html += '</tr>';
+    });
+    html += '</table>';
     sheets.push(
-      `<div class="sheet-tab">${escapeHtml(sheetName)}</div>${html}`
+      `<div class="sheet-tab">${escapeHtml(worksheet.name)}</div>${html}`
     );
-  }
+  });
   return sheets.join('<hr style="margin:16px 0;border-color:#e5e7eb;">');
 }
 

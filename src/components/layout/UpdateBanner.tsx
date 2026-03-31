@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useUpdate } from "@/hooks/useUpdate";
 import { useTranslation } from "@/hooks/useTranslation";
@@ -12,25 +12,20 @@ function getRosettaDismissKey(assetName: string, version: string): string {
 export function UpdateBanner() {
   const { updateInfo, quitAndInstall } = useUpdate();
   const { t } = useTranslation();
-  const [dismissedRosetta, setDismissedRosetta] = useState(false);
-
   const rosettaDismissKey = useMemo(
     () => getRosettaDismissKey(updateInfo?.downloadAssetName || '', updateInfo?.latestVersion || ''),
     [updateInfo?.downloadAssetName, updateInfo?.latestVersion],
   );
 
-  useEffect(() => {
-    if (!updateInfo?.runningUnderRosetta) {
-      setDismissedRosetta(false);
-      return;
-    }
-
+  const [dismissedRosetta, setDismissedRosetta] = useState(() => {
     try {
-      setDismissedRosetta(localStorage.getItem(rosettaDismissKey) === '1');
+      return localStorage.getItem(
+        getRosettaDismissKey(updateInfo?.downloadAssetName || '', updateInfo?.latestVersion || ''),
+      ) === '1';
     } catch {
-      setDismissedRosetta(false);
+      return false;
     }
-  }, [rosettaDismissKey, updateInfo?.runningUnderRosetta]);
+  });
 
   const dismissRosettaWarning = () => {
     try {

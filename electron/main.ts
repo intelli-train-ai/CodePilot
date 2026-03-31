@@ -1,4 +1,4 @@
-import { app, BrowserWindow, nativeImage, dialog, session, utilityProcess, ipcMain, shell, Tray, Menu } from 'electron';
+import { app, BrowserWindow, nativeImage, dialog, session, utilityProcess, ipcMain, shell, Tray, Menu, screen } from 'electron';
 import path from 'path';
 import { execFileSync, spawn, ChildProcess } from 'child_process';
 import fs from 'fs';
@@ -1084,7 +1084,7 @@ app.whenReady().then(async () => {
   ipcMain.handle('capture:region', async (_event, rect: { x: number; y: number; width: number; height: number }) => {
     if (!mainWindow) return null;
     const scaleFactor = mainWindow.webContents.getZoomFactor();
-    const dpr = require('electron').screen.getPrimaryDisplay().scaleFactor;
+    const dpr = screen.getPrimaryDisplay().scaleFactor;
     const scale = scaleFactor * dpr;
     const captureRect = {
       x: Math.round(rect.x * scale),

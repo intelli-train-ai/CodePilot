@@ -4,6 +4,7 @@ import path from 'path';
 import AdmZip from 'adm-zip';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
+import { requireAuth } from '@/lib/auth';
 import type { ErrorResponse } from '@/types';
 
 export const runtime = 'nodejs';
@@ -29,6 +30,9 @@ async function extractTar(archivePath: string, destDir: string): Promise<void> {
  * Archives (.zip, .tar.gz, etc.) are automatically extracted.
  */
 export async function POST(request: NextRequest) {
+  const authError = requireAuth(request);
+  if (authError) return authError;
+
   try {
     const formData = await request.formData();
     const targetDir = formData.get('dir') as string;
@@ -78,6 +82,15 @@ export async function POST(request: NextRequest) {
           for (const entry of entries) {
             if (junkPrefixes.some(p => entry.entryName.startsWith(p))) {
               zip.deleteFile(entry);
+              continue;
+            }
+            // Prevent Zip Slip path traversal
+            const entryTarget = path.resolve(resolvedDir, entry.entryName);
+            if (!entryTarget.startsWith(resolvedDir + path.sep) && entryTarget !== resolvedDir) {
+              return NextResponse.json<ErrorResponse>(
+                { error: `Blocked path traversal in zip entry: ${entry.entryName}` },
+                { status: 400 }
+              );
             }
           }
           zip.extractAllTo(resolvedDir, true);

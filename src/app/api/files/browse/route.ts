@@ -22,6 +22,9 @@ async function getWindowsDrives(): Promise<string[]> {
 
 // Create a new directory inside the given parent
 export async function POST(request: NextRequest) {
+  const authError = requireAuth(request);
+  if (authError) return authError;
+
   try {
     const { dir, name } = await request.json();
     if (!dir || !name) {

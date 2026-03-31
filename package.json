@@ -65,6 +65,7 @@
     "discord.js": "^14.25.1",
     "dompurify": "^3.3.3",
     "electron-updater": "^6.8.3",
+    "exceljs": "^4.4.0",
     "html-to-image": "^1.11.13",
     "mammoth": "^1.12.0",
     "markdown-it": "^14.1.1",
@@ -89,7 +90,6 @@
     "use-stick-to-bottom": "^1.1.2",
     "uuid": "^13.0.0",
     "ws": "^8.19.0",
-    "xlsx": "^0.18.5",
     "zlib-sync": "^0.1.10"
   },
   "devDependencies": {
