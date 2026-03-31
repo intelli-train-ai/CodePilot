@@ -500,7 +500,7 @@ export function ChatListPanel({ open, width, hasUpdate, readyToInstall }: ChatLi
 
       {/* Section title + add folder button (fixed, not scrolling) */}
       <div className="flex items-center justify-between px-5 pt-2 pb-1.5 shrink-0">
-        <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">
+        <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground/60">
           {t('chatList.threads')}
         </span>
         <Button

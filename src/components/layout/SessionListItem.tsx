@@ -95,7 +95,7 @@ export function SessionListItem({
         {/* Right area — fixed width, time or dots swap via opacity */}
         <span className="shrink-0 w-[38px] flex items-center justify-end">
           <span className={cn(
-            "text-[11px] text-muted-foreground/40 truncate transition-opacity",
+            "text-xs text-muted-foreground/40 truncate transition-opacity",
             showActions ? "opacity-0" : "opacity-100"
           )}>
             {formatRelativeTime(session.updated_at, t)}
