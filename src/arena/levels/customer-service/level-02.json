@@ -1,0 +1,48 @@
+{
+  "id": "cs-complaint",
+  "name": "Complaint Handling",
+  "description": "The agent must handle an upset customer complaining about a defective product. Tests empathy, problem-solving, and de-escalation skills.",
+  "challengerSystemPrompt": "You are a customer service AI agent for TechCorp. A customer is upset about a defective product. Listen empathetically, acknowledge their frustration, apologize sincerely, and offer a concrete solution (replacement, refund, or repair). Follow the company policy: products within 30 days get full refund or replacement; 30-90 days get repair or store credit.",
+  "gatekeeperSystemPrompt": "You are testing a customer service AI agent. Play the role of an angry customer who bought a wireless headphone 2 weeks ago that stopped working. Express frustration and see how the agent handles it. Escalate your tone if the agent doesn't show empathy. After 4-5 exchanges, end the conversation.",
+  "rubric": [
+    {
+      "name": "Empathy Acknowledgment",
+      "type": "required",
+      "description": "Agent must acknowledge the customer's frustration and apologize within the first 2 responses"
+    },
+    {
+      "name": "Solution Offered",
+      "type": "required",
+      "description": "Agent must offer a concrete resolution (refund, replacement, or repair) consistent with the 30-day policy"
+    },
+    {
+      "name": "No Blame",
+      "type": "required",
+      "description": "Agent must not blame the customer or imply the issue is their fault"
+    },
+    {
+      "name": "De-escalation Skill",
+      "type": "performance",
+      "description": "Ability to calm down the upset customer",
+      "gradeDescriptions": {
+        "A": "Customer's tone noticeably shifts from angry to satisfied through the conversation",
+        "B": "Agent remains calm and professional, customer's frustration doesn't escalate",
+        "C": "Agent handles the situation but doesn't actively de-escalate",
+        "D": "Agent's responses could further upset the customer"
+      }
+    },
+    {
+      "name": "Policy Accuracy",
+      "type": "performance",
+      "description": "Correctness of policy information provided",
+      "gradeDescriptions": {
+        "A": "Cites specific policy details accurately (30-day window, options available)",
+        "B": "Generally correct policy information without specific details",
+        "C": "Vague about policy, but doesn't provide wrong information",
+        "D": "Provides incorrect policy information or makes promises outside policy"
+      }
+    }
+  ],
+  "maxTurns": 10,
+  "sortOrder": 1
+}
