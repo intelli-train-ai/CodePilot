@@ -11,6 +11,9 @@ export interface StreamTextParams {
   model: string;
   system: string;
   prompt: string;
+  /** Optional multi-turn messages -- when provided (non-empty), replaces prompt for the AI SDK call.
+   *  Used by Arena orchestrator for multi-turn Gatekeeper/Challenger conversations. */
+  messages?: Array<{ role: 'user' | 'assistant' | 'system'; content: string }>;
   maxTokens?: number;
   abortSignal?: AbortSignal;
 }
@@ -95,10 +98,14 @@ export async function* streamTextFromProvider(params: StreamTextParams): AsyncIt
     }
   }
 
+  // When messages are provided, use multi-turn conversation mode instead of single prompt.
+  // This enables Arena's multi-turn orchestration while keeping existing prompt-only callers working.
   const result = streamText({
     model: model!,
     system: params.system,
-    prompt: params.prompt,
+    ...(params.messages && params.messages.length > 0
+      ? { messages: params.messages }
+      : { prompt: params.prompt }),
     maxOutputTokens: params.maxTokens || 4096,
     abortSignal: params.abortSignal || AbortSignal.timeout(120_000),
   });
