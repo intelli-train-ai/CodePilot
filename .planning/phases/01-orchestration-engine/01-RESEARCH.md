@@ -554,22 +554,25 @@ export type WorldConfig = z.infer<typeof WorldConfigSchema>;
 | A2 | Zod v4 `.describe()` 在 AI SDK Output.object() 中正常工作 | Code Examples | 如果不兼容需改用 `.meta({ describe: '...' })` 或 `zodSchema()` wrapper |
 | A3 | AI SDK `streamText` 的 `usage` 返回 `totalTokens` 包含 input + output | Patterns | 如果只返回 output tokens，需要额外计算 input tokens |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Zod v4 + Output.object() 实际兼容性**
    - What we know: AI SDK v6.0.73 peerDep 声明支持 zod ^4.1.8，项目安装了 zod 4.3.6
    - What's unclear: 实际调用 `Output.object()` + Zod v4 schema 是否有边缘问题
    - Recommendation: Phase 1 实施第一步写一个最小 POC 验证此路径
+   - RESOLVED: 计划统一使用 `generateText` + `Output.object({ schema })` 方案，版本满足 peerDep 要求
 
 2. **generateText vs generateObject 在当前 AI SDK 版本**
    - What we know: 文档推荐 `generateText` + `Output.object()`
    - What's unclear: `generateObject` 是否仍是独立 export
    - Recommendation: 优先使用 `generateText` + `Output.object()`，如不可用再回退 `generateObject`
+   - RESOLVED: 计划选定 `generateText` + `Output.object()` 作为唯一方案
 
 3. **Arena 角色的默认 Provider/Model**
    - What we know: INTG-02 要求三角色可独立选择
    - What's unclear: 用户未配置时的 fallback 策略
    - Recommendation: 未配置时 fallback 到用户全局默认 provider + model（通过 `resolveProvider()` 无参调用）
+   - RESOLVED: 空字符串 providerId 时通过 `resolveProvider({ providerId: undefined })` 回退到全局默认
 
 ## Environment Availability
 
