@@ -50,9 +50,9 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 02-01-PLAN.md -- 基础层：useArenaSSE hook + UI 类型 + i18n + 侧边栏入口 + 路由
-- [ ] 02-02-PLAN.md -- 页面骨架：ArenaView 状态机 + 关卡卡片列表 + 运行控制 + 角色选择器
-- [ ] 02-03-PLAN.md -- 对话流 + 评分报告：气泡组件 + 状态栏 + 自动滚动 + GradeReport + 视觉验证
+- [x] 02-01-PLAN.md -- 基础层：useArenaSSE hook + UI 类型 + i18n + 侧边栏入口 + 路由
+- [x] 02-02-PLAN.md -- 页面骨架：ArenaView 状态机 + 关卡卡片列表 + 运行控制 + 角色选择器
+- [x] 02-03-PLAN.md -- 对话流 + 评分报告：气泡组件 + 状态栏 + 自动滚动 + GradeReport + 视觉验证
 
 ### Phase 3: World Navigation & Progression
 **Goal**: Users can browse worlds and levels in a sidebar, see their progress, and unlock levels sequentially by clearing prerequisite levels
