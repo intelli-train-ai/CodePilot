@@ -1,0 +1,7 @@
+{
+  "id": "customer-service",
+  "name": "Customer Service Agent",
+  "description": "Test an AI agent's ability to handle customer service scenarios with empathy, accuracy, and professionalism.",
+  "icon": "headset",
+  "sortOrder": 0
+}
