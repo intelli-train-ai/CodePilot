@@ -63,8 +63,12 @@ Plans:
   2. Clicking a level opens a detail page with scenario description, grading dimensions, and a start button
   3. Levels within a world unlock sequentially -- a locked level cannot be started until the previous level is cleared
   4. Each level shows its run history with past results and grades
-**Plans**: TBD
-**UI hint**: yes
+**Plans:** 3 plans
+
+Plans:
+- [ ] 03-01-PLAN.md -- 双栏布局重构 + 世界/关卡导航树 + 空状态引导
+- [ ] 03-02-PLAN.md -- 进度查询 API + 顺序解锁逻辑 + 关卡详情页
+- [ ] 03-03-PLAN.md -- 运行历史查询 + 历史列表组件 + Phase 3 视觉验证
 
 ### Phase 4: Manual Gatekeeper Mode
 **Goal**: Users can take over the Gatekeeper role and manually question the Challenger, with Challenger responses still streaming in real time
@@ -86,6 +90,6 @@ Note: Phase 4 depends on Phase 2 (not Phase 3), so Phase 3 and Phase 4 are theor
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Orchestration Engine | 4/4 | Complete | 2026-04-10 |
-| 2. Auto Mode UI | 0/3 | Planned | - |
-| 3. World Navigation & Progression | 0/? | Not started | - |
+| 2. Auto Mode UI | 3/3 | Complete | 2026-04-10 |
+| 3. World Navigation & Progression | 0/3 | Planned | - |
 | 4. Manual Gatekeeper Mode | 0/? | Not started | - |
