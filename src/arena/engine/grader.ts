@@ -14,12 +14,39 @@ import { GraderOutputSchema } from '../schemas/grader-output';
 import type { GraderOutput } from '../schemas/grader-output';
 import type { LevelConfig, RubricItem } from '../schemas/level-config';
 
+const GRADER_JSON_INSTRUCTION = `\n\nYou MUST respond with a JSON object in this exact format (no markdown, no extra text):
+{
+  "passed": true,
+  "requiredCriteria": [{"name": "...", "passed": true, "reason": "..."}],
+  "performanceDimensions": [{"name": "...", "grade": "A", "reason": "..."}],
+  "suggestions": [{"content": "...", "referenceTurn": 0}]
+}
+- "passed": true only if ALL required criteria passed
+- "grade": one of "A", "B", "C", "D"
+- "suggestions": max 3 items, each with referenceTurn (integer >= 0)`;
+
+/**
+ * Try parsing Grader output from raw text (fallback for providers
+ * that don't support Output.object / structured output mode).
+ */
+function tryParseGraderJson(text: string): GraderOutput | null {
+  try {
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) return null;
+    const parsed = JSON.parse(jsonMatch[0]);
+    const result = GraderOutputSchema.safeParse(parsed);
+    return result.success ? result.data : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Call Grader LLM to evaluate the complete conversation.
  *
- * Uses generateText + Output.object() + GraderOutputSchema for structured output.
- * The grader prompt includes the rubric and full transcript with turn numbers
- * so suggestions can reference specific turns (per GRAD-05).
+ * Strategy: try Output.object() first (native structured output), then
+ * fallback to prompt-based JSON + manual Zod parse for providers that
+ * don't support structured output (e.g. GLM via OpenAI-compatible).
  *
  * @param opts.transcript - complete conversation with role and turn info
  * @param opts.level - level configuration with rubric and optional grader system prompt
@@ -47,26 +74,51 @@ The overall "passed" field should be true ONLY if ALL required criteria passed.`
     opts.level.roleConfig?.grader?.model || '',
   );
 
+  // Attempt 1: Output.object() (native structured output)
+  try {
+    const result = await generateText({
+      model,
+      output: Output.object({ schema: GraderOutputSchema }),
+      system: systemPrompt,
+      prompt: graderPrompt,
+      abortSignal: opts.abortSignal || AbortSignal.timeout(120_000),
+    });
+
+    if (result.output) {
+      return {
+        output: result.output,
+        usage: {
+          totalTokens: result.usage.totalTokens ?? 0,
+          promptTokens: result.usage.inputTokens ?? 0,
+          completionTokens: result.usage.outputTokens ?? 0,
+        },
+      };
+    }
+  } catch (err) {
+    console.warn('[arena:grader] Output.object() failed, trying prompt-based fallback:', (err as Error).message);
+  }
+
+  // Attempt 2: Prompt-based JSON fallback
   const result = await generateText({
     model,
-    output: Output.object({ schema: GraderOutputSchema }),
-    system: systemPrompt,
+    system: systemPrompt + GRADER_JSON_INSTRUCTION,
     prompt: graderPrompt,
     abortSignal: opts.abortSignal || AbortSignal.timeout(120_000),
   });
 
-  if (!result.output) {
-    throw new Error('[arena:grader] Failed to generate structured grading output');
+  const parsed = tryParseGraderJson(result.text);
+  if (parsed) {
+    return {
+      output: parsed,
+      usage: {
+        totalTokens: result.usage.totalTokens ?? 0,
+        promptTokens: result.usage.inputTokens ?? 0,
+        completionTokens: result.usage.outputTokens ?? 0,
+      },
+    };
   }
 
-  return {
-    output: result.output,
-    usage: {
-      totalTokens: result.usage.totalTokens ?? 0,
-      promptTokens: result.usage.inputTokens ?? 0,
-      completionTokens: result.usage.outputTokens ?? 0,
-    },
-  };
+  throw new Error('[arena:grader] Failed to generate structured grading output (both Output.object and JSON fallback failed)');
 }
 
 /**

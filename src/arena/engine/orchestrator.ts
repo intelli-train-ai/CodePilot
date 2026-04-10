@@ -132,6 +132,25 @@ export async function* runArenaOrchestration(
   }
   const level = loaded.config;
 
+  // Inject default provider/model into level config so role modules pick them up
+  // when the level JSON doesn't specify per-role overrides
+  if (params.defaultProviderId || params.defaultModel) {
+    if (!level.roleConfig) {
+      level.roleConfig = {};
+    }
+    for (const role of ['gatekeeper', 'challenger', 'grader'] as const) {
+      if (!level.roleConfig[role]) {
+        level.roleConfig[role] = {};
+      }
+      if (!level.roleConfig[role]!.providerId && params.defaultProviderId) {
+        level.roleConfig[role]!.providerId = params.defaultProviderId;
+      }
+      if (!level.roleConfig[role]!.model && params.defaultModel) {
+        level.roleConfig[role]!.model = params.defaultModel;
+      }
+    }
+  }
+
   // 2. Create run record (DB-first)
   const run = d.createArenaRun({
     levelId: params.levelId,

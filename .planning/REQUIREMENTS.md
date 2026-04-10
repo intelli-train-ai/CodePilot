@@ -36,6 +36,7 @@
 - [ ] **UI-03**: 评分报告页：通关/未通关状态、必须项逐条 Pass/Fail、表现项等级、改进建议
 - [ ] **UI-04**: 世界/关卡导航侧边栏，含进度标记（通关✓/未通关/锁定🔒）
 - [ ] **UI-05**: 关卡详情页：场景描述、评分维度说明、开始按钮
+- [ ] **UI-06**: 启动运行时可为 Gatekeeper、Challenger、Grader 分别选择 provider 和 model（高级选项）
 
 ### Data 数据层
 
@@ -123,10 +124,11 @@
 | INTG-01 | Phase 1 | Pending |
 | INTG-02 | Phase 1 | Pending |
 | INTG-03 | Phase 2 | Pending |
+| UI-06 | Phase 2 | Pending |
 
 **Coverage:**
-- v1 requirements: 31 total
-- Mapped to phases: 31
+- v1 requirements: 32 total
+- Mapped to phases: 32
 - Unmapped: 0
 
 ---

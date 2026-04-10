@@ -32,20 +32,21 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans:** 4 plans
 
 Plans:
-- [ ] 01-01-PLAN.md -- Arena 基础设施：text-generator 扩展 + 类型系统 + DB schema + CRUD
-- [ ] 01-02-PLAN.md -- 关卡体系：Zod schemas + level-loader + 示例世界
-- [ ] 01-03-PLAN.md -- 引擎核心：三角色模块 + Token Tracker + 编排循环
-- [ ] 01-04-PLAN.md -- API 路由：SSE 流端点 + 关卡列表端点 + 测试
+- [x] 01-01-PLAN.md -- Arena 基础设施：text-generator 扩展 + 类型系统 + DB schema + CRUD
+- [x] 01-02-PLAN.md -- 关卡体系：Zod schemas + level-loader + 示例世界
+- [x] 01-03-PLAN.md -- 引擎核心：三角色模块 + Token Tracker + 编排循环
+- [x] 01-04-PLAN.md -- API 路由：SSE 流端点 + 关卡列表端点 + 测试
 
 ### Phase 2: Auto Mode UI
 **Goal**: Users can launch an auto-mode Arena run from the CodePilot sidebar and watch the Gatekeeper-Challenger conversation stream in real time, then view the grade report
 **Depends on**: Phase 1
-**Requirements**: UI-01, UI-02, UI-03, INTG-03
+**Requirements**: UI-01, UI-02, UI-03, UI-06, INTG-03
 **Success Criteria** (what must be TRUE):
   1. Arena appears as a sidebar entry alongside Chat and Plugins; clicking it opens the Arena view
   2. During an auto-mode run, Gatekeeper messages appear on the left and Challenger messages stream token-by-token on the right in real time
   3. After a run completes, the grade report shows pass/fail status, per-criterion results, performance grades, and improvement suggestions
   4. All UI text is available in both Chinese and English
+  5. Arena 启动页提供高级选项，用户可为 Gatekeeper、Challenger、Grader 分别选择 provider 和 model（默认继承全局配置）
 **Plans**: TBD
 **UI hint**: yes
 
