@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { useArenaSSE } from '@/hooks/useArenaSSE';
 import { LevelCardList } from './LevelCardList';
 import { RunControls } from './RunControls';
+import { ConversationStream } from './ConversationStream';
 import type { ArenaViewState, RunParams, ArenaLevelInfo } from './types';
 
 export function ArenaView() {
@@ -83,10 +84,18 @@ export function ArenaView() {
     case 'completed':
       return (
         <div className="flex h-full flex-col">
-          {/* ConversationStream + GradeReport will be implemented in Plan 03 */}
-          <div className="flex flex-1 items-center justify-center text-muted-foreground">
-            {viewState.phase === 'running' ? 'Running...' : 'Completed'}
-          </div>
+          <ConversationStream
+            messages={arenaSSE.messages}
+            streamingDelta={arenaSSE.streamingDelta}
+            currentTurn={arenaSSE.currentTurn}
+            maxTurns={selectedLevel?.level.maxTurns ?? 10}
+            status={arenaSSE.status}
+            tokenCount={arenaSSE.tokenUsage?.totalUsed ?? 0}
+            grade={arenaSSE.grade}
+            error={arenaSSE.error}
+            onStop={arenaSSE.cancelRun}
+            onBack={handleBack}
+          />
         </div>
       );
   }
