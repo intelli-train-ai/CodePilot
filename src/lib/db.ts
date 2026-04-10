@@ -312,6 +312,54 @@ function initDb(db: Database.Database): void {
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
     CREATE INDEX IF NOT EXISTS idx_perm_links_request ON channel_permission_links(permission_request_id);
+
+    -- Arena: challenge run records
+    CREATE TABLE IF NOT EXISTS arena_runs (
+      id TEXT PRIMARY KEY,
+      level_id TEXT NOT NULL,
+      world_id TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'running'
+        CHECK(status IN ('running', 'completed', 'failed', 'terminated')),
+      passed INTEGER,
+      turn_count INTEGER NOT NULL DEFAULT 0,
+      token_usage_total INTEGER NOT NULL DEFAULT 0,
+      termination_reason TEXT,
+      gatekeeper_provider_id TEXT NOT NULL DEFAULT '',
+      gatekeeper_model TEXT NOT NULL DEFAULT '',
+      challenger_provider_id TEXT NOT NULL DEFAULT '',
+      challenger_model TEXT NOT NULL DEFAULT '',
+      grader_provider_id TEXT NOT NULL DEFAULT '',
+      grader_model TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      completed_at TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_arena_runs_level ON arena_runs(level_id);
+    CREATE INDEX IF NOT EXISTS idx_arena_runs_status ON arena_runs(status);
+
+    -- Arena: conversation messages per run
+    CREATE TABLE IF NOT EXISTS arena_messages (
+      id TEXT PRIMARY KEY,
+      run_id TEXT NOT NULL,
+      role TEXT NOT NULL CHECK(role IN ('gatekeeper', 'challenger', 'grader', 'system')),
+      content TEXT NOT NULL,
+      turn_number INTEGER NOT NULL,
+      token_usage TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (run_id) REFERENCES arena_runs(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_arena_messages_run ON arena_messages(run_id);
+
+    -- Arena: grading results per run (one grade per run)
+    CREATE TABLE IF NOT EXISTS arena_grades (
+      id TEXT PRIMARY KEY,
+      run_id TEXT NOT NULL UNIQUE,
+      passed INTEGER NOT NULL,
+      grade_data TEXT NOT NULL,
+      token_usage TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (run_id) REFERENCES arena_runs(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_arena_grades_run ON arena_grades(run_id);
   `);
 
   // Run migrations for existing databases
