@@ -67,7 +67,7 @@ describe('TokenTracker', () => {
     const tracker = new TokenTracker(10_000);
     assert.equal(tracker.hasEnoughForNextTurn(), true); // 10000 > 8000
     tracker.consume(2000);
-    assert.equal(tracker.hasEnoughForNextTurn(), true); // 8000 > 8000 is false
+    assert.equal(tracker.hasEnoughForNextTurn(), false); // 8000 > 8000 is false (strictly greater)
     // Actually 8000 remaining, 8000 reserve, so NOT enough
     // hasEnoughForNextTurn checks remaining > GRADER_RESERVE
     // 8000 > 8000 = false -- exact boundary is NOT enough
