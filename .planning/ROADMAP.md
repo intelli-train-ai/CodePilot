@@ -47,8 +47,12 @@ Plans:
   3. After a run completes, the grade report shows pass/fail status, per-criterion results, performance grades, and improvement suggestions
   4. All UI text is available in both Chinese and English
   5. Arena 启动页提供高级选项，用户可为 Gatekeeper、Challenger、Grader 分别选择 provider 和 model（默认继承全局配置）
-**Plans**: TBD
-**UI hint**: yes
+**Plans:** 3 plans
+
+Plans:
+- [ ] 02-01-PLAN.md -- 基础层：useArenaSSE hook + UI 类型 + i18n + 侧边栏入口 + 路由
+- [ ] 02-02-PLAN.md -- 页面骨架：ArenaView 状态机 + 关卡卡片列表 + 运行控制 + 角色选择器
+- [ ] 02-03-PLAN.md -- 对话流 + 评分报告：气泡组件 + 状态栏 + 自动滚动 + GradeReport + 视觉验证
 
 ### Phase 3: World Navigation & Progression
 **Goal**: Users can browse worlds and levels in a sidebar, see their progress, and unlock levels sequentially by clearing prerequisite levels
@@ -81,7 +85,7 @@ Note: Phase 4 depends on Phase 2 (not Phase 3), so Phase 3 and Phase 4 are theor
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Orchestration Engine | 0/4 | Planned | - |
-| 2. Auto Mode UI | 0/? | Not started | - |
+| 1. Orchestration Engine | 4/4 | Complete | 2026-04-10 |
+| 2. Auto Mode UI | 0/3 | Planned | - |
 | 3. World Navigation & Progression | 0/? | Not started | - |
 | 4. Manual Gatekeeper Mode | 0/? | Not started | - |
