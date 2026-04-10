@@ -92,43 +92,43 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ORCH-01 | — | Pending |
-| ORCH-02 | — | Pending |
-| ORCH-03 | — | Pending |
-| ORCH-04 | — | Pending |
-| ORCH-05 | — | Pending |
-| ORCH-06 | — | Pending |
-| GRAD-01 | — | Pending |
-| GRAD-02 | — | Pending |
-| GRAD-03 | — | Pending |
-| GRAD-04 | — | Pending |
-| GRAD-05 | — | Pending |
-| LEVL-01 | — | Pending |
-| LEVL-02 | — | Pending |
-| LEVL-03 | — | Pending |
-| LEVL-04 | — | Pending |
-| UI-01 | — | Pending |
-| UI-02 | — | Pending |
-| UI-03 | — | Pending |
-| UI-04 | — | Pending |
-| UI-05 | — | Pending |
-| DATA-01 | — | Pending |
-| DATA-02 | — | Pending |
-| DATA-03 | — | Pending |
-| DATA-04 | — | Pending |
-| DATA-05 | — | Pending |
-| HUMN-01 | — | Pending |
-| HUMN-02 | — | Pending |
-| HUMN-03 | — | Pending |
-| INTG-01 | — | Pending |
-| INTG-02 | — | Pending |
-| INTG-03 | — | Pending |
+| ORCH-01 | Phase 1 | Pending |
+| ORCH-02 | Phase 1 | Pending |
+| ORCH-03 | Phase 1 | Pending |
+| ORCH-04 | Phase 1 | Pending |
+| ORCH-05 | Phase 1 | Pending |
+| ORCH-06 | Phase 1 | Pending |
+| GRAD-01 | Phase 1 | Pending |
+| GRAD-02 | Phase 1 | Pending |
+| GRAD-03 | Phase 1 | Pending |
+| GRAD-04 | Phase 1 | Pending |
+| GRAD-05 | Phase 1 | Pending |
+| LEVL-01 | Phase 1 | Pending |
+| LEVL-02 | Phase 1 | Pending |
+| LEVL-03 | Phase 3 | Pending |
+| LEVL-04 | Phase 3 | Pending |
+| UI-01 | Phase 2 | Pending |
+| UI-02 | Phase 2 | Pending |
+| UI-03 | Phase 2 | Pending |
+| UI-04 | Phase 3 | Pending |
+| UI-05 | Phase 3 | Pending |
+| DATA-01 | Phase 1 | Pending |
+| DATA-02 | Phase 1 | Pending |
+| DATA-03 | Phase 1 | Pending |
+| DATA-04 | Phase 1 | Pending |
+| DATA-05 | Phase 3 | Pending |
+| HUMN-01 | Phase 4 | Pending |
+| HUMN-02 | Phase 4 | Pending |
+| HUMN-03 | Phase 4 | Pending |
+| INTG-01 | Phase 1 | Pending |
+| INTG-02 | Phase 1 | Pending |
+| INTG-03 | Phase 2 | Pending |
 
 **Coverage:**
 - v1 requirements: 31 total
-- Mapped to phases: 0
-- Unmapped: 31
+- Mapped to phases: 31
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-10*
-*Last updated: 2026-04-10 after initial definition*
+*Last updated: 2026-04-10 after roadmap creation*
