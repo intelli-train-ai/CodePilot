@@ -9,6 +9,7 @@ import {
   FileArrowDown,
   Plus,
   FolderPlus,
+  GameController,
   Lightning,
   Plug,
   Terminal,
@@ -426,6 +427,7 @@ export function ChatListPanel({ open, width, hasUpdate, readyToInstall }: ChatLi
 
   const navItems = [
     { href: "/skills", label: t('nav.skills' as TranslationKey), icon: Lightning },
+    { href: "/arena", label: t('nav.arena' as TranslationKey), icon: GameController },
     { href: "/mcp", label: t('nav.mcp' as TranslationKey), icon: Plug },
     { href: "/cli-tools", label: t('nav.cliTools' as TranslationKey), icon: Terminal },
     { href: "/bridge", label: t('nav.bridge' as TranslationKey), icon: WifiHigh },

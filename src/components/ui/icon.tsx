@@ -69,6 +69,7 @@ export {
   Plug,
   Plus,
   Question,
+  Shield,
   SidebarSimple,
   SlidersHorizontal,
   SortDescending,
