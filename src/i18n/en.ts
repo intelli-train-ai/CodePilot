@@ -1364,6 +1364,7 @@ const en = {
   'arena.error.runFailed': 'Run failed: {reason}. Try starting a new run.',
   'arena.stop': 'Stop Run',
   'arena.levelCard.start': 'Start Challenge',
+  'arena.levelCard.turns': '{count} turns',
 } as const;
 
 export type TranslationKey = keyof typeof en;

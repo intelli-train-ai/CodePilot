@@ -1361,6 +1361,7 @@ const zh: Record<TranslationKey, string> = {
   'arena.error.runFailed': '运行失败：{reason}。请尝试重新开始。',
   'arena.stop': '停止运行',
   'arena.levelCard.start': '开始挑战',
+  'arena.levelCard.turns': '{count} 轮',
 };
 
 export default zh;

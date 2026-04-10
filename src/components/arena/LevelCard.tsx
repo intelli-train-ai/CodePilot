@@ -19,7 +19,7 @@ export function LevelCard({ level, onStart }: LevelCardProps) {
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="text-base font-semibold">{level.name}</CardTitle>
-          <Badge variant="secondary" className="text-xs">{level.maxTurns} turns</Badge>
+          <Badge variant="secondary" className="text-xs">{t('arena.levelCard.turns' as TranslationKey).replace('{count}', String(level.maxTurns))}</Badge>
         </div>
         <CardDescription className="text-sm">{level.description}</CardDescription>
       </CardHeader>
