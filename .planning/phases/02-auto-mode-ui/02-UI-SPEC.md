@@ -52,11 +52,13 @@ Exceptions: none
 | Role | Size | Weight | Line Height | Usage in this phase |
 |------|------|--------|-------------|---------------------|
 | Body | 14px (text-sm) | 400 (font-normal) | 1.43 (20px) | Message bubble text, grade report body, level card description |
-| Label | 12px (text-xs) | 500 (font-medium) | 1.33 (16px) | Status bar labels, badge text, turn indicators, "Turn N" references |
+| Label | 12px (text-xs) | 600 (font-semibold) | 1.33 (16px) | Status bar labels, badge text, turn indicators, "Turn N" references |
 | Heading | 16px (text-base) | 600 (font-semibold) | 1.5 (24px) | Level card title, grade report section headings, "Arena" page title |
 | Display | 20px (text-xl) | 600 (font-semibold) | 1.4 (28px) | Grade report pass/fail banner headline |
 
-**Source:** Project-wide pattern -- shadcn components default to `text-sm` body, `text-xs` badges/labels, `font-semibold` headings. Geist font at these sizes is highly legible. The project does not use `text-lg` in UI components (reserved for dialog titles only).
+**Declared weights (2 total):** 400 (font-normal) for Body, 600 (font-semibold) for Label/Heading/Display.
+
+**Source:** Project-wide pattern -- shadcn components default to `text-sm` body, `text-xs` badges/labels, `font-semibold` headings. Geist font at these sizes is highly legible. The project does not use `text-lg` in UI components (reserved for dialog titles only). Label weight unified to 600 (font-semibold) to maintain the two-weight constraint (400 + 600), providing sufficient visual distinction at 12px through size contrast alone.
 
 ---
 
@@ -158,6 +160,18 @@ These are Tailwind utility classes applied directly, not new CSS variables:
 
 ---
 
+## Visual Focal Points
+
+Each view phase declares one primary visual anchor that draws the user's eye first.
+
+| View Phase | Focal Element | Why |
+|------------|---------------|-----|
+| Levels (level list) | The "Start Challenge" Button (`bg-primary`) inside each LevelCard | It is the only accent-colored element on the page. All surrounding surfaces are dominant (`bg-background`) or secondary (`bg-card`), making the primary-colored CTA button the clear visual priority anchor per the 60/30/10 color split. |
+| Running (conversation) | The latest ArenaBubble at the scroll bottom + streaming cursor | Auto-scroll keeps the newest message at the viewport bottom; the blinking cursor provides motion-based focal pull. |
+| Completed (grade report) | The Pass/Fail banner (`bg-status-success-muted` or `bg-status-error-muted`) | Full-width colored banner with Display-size (20px/600) heading is the largest and most chromatic element in the view. |
+
+---
+
 ## Interaction Contracts
 
 ### 1. Page State Machine (D-07)
@@ -208,7 +222,7 @@ No URL changes -- internal React state only.
 - **Entry animation:** Slides up from below (translateY 16px->0, opacity 0->1, duration 300ms, easeOut)
 - **Layout sections (top to bottom):**
   1. **Pass/Fail Banner:** Full-width, `bg-status-success-muted border-status-success-border` for pass, `bg-status-error-muted border-status-error-border` for fail. Display-size heading + Badge
-  2. **Required Criteria:** Vertical list, each row: CheckCircle (green) or XCircle (red) icon (16px) + criterion name (font-medium) + reason (text-muted-foreground)
+  2. **Required Criteria:** Vertical list, each row: CheckCircle (green) or XCircle (red) icon (16px) + criterion name (font-semibold) + reason (text-muted-foreground)
   3. **Performance Dimensions:** Vertical list, each row: Grade badge (A/B/C/D with color per table above) + dimension name + reason
   4. **Improvement Suggestions:** Up to 3 Card components, each containing suggestion text + "Turn {n}" label (text-xs, muted)
 
