@@ -29,7 +29,13 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Grader output contains per-criterion Pass/Fail results, performance-dimension grades (A/B/C/D), and up to 3 improvement suggestions -- all validated by Zod schema
   4. Every conversation message and grade result is persisted in SQLite tables (`arena_runs`, `arena_messages`, `arena_grades`) before being emitted via SSE
   5. Level JSON configs are loaded and validated at startup; invalid configs produce clear error messages
-**Plans**: TBD
+**Plans:** 4 plans
+
+Plans:
+- [ ] 01-01-PLAN.md -- Arena 基础设施：text-generator 扩展 + 类型系统 + DB schema + CRUD
+- [ ] 01-02-PLAN.md -- 关卡体系：Zod schemas + level-loader + 示例世界
+- [ ] 01-03-PLAN.md -- 引擎核心：三角色模块 + Token Tracker + 编排循环
+- [ ] 01-04-PLAN.md -- API 路由：SSE 流端点 + 关卡列表端点 + 测试
 
 ### Phase 2: Auto Mode UI
 **Goal**: Users can launch an auto-mode Arena run from the CodePilot sidebar and watch the Gatekeeper-Challenger conversation stream in real time, then view the grade report
@@ -69,12 +75,12 @@ Decimal phases appear between their surrounding integers in numeric order.
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 Note: Phase 4 depends on Phase 2 (not Phase 3), so Phase 3 and Phase 4 are theoretically parallelizable for future insertion flexibility.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Orchestration Engine | 0/? | Not started | - |
+| 1. Orchestration Engine | 0/4 | Planned | - |
 | 2. Auto Mode UI | 0/? | Not started | - |
 | 3. World Navigation & Progression | 0/? | Not started | - |
 | 4. Manual Gatekeeper Mode | 0/? | Not started | - |
