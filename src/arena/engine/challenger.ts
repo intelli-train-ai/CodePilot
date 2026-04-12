@@ -50,12 +50,18 @@ export async function* callChallenger(opts: {
     opts.level.roleConfig?.challenger?.model || '',
   );
 
+  // Combine client disconnect signal with per-call timeout so both work
+  const timeoutSignal = AbortSignal.timeout(120_000);
+  const abortSignal = opts.abortSignal
+    ? AbortSignal.any([opts.abortSignal, timeoutSignal])
+    : timeoutSignal;
+
   const result = streamText({
     model,
     system: opts.level.challengerSystemPrompt,
     messages: opts.transcript,
     maxOutputTokens: 4096,
-    abortSignal: opts.abortSignal || AbortSignal.timeout(120_000),
+    abortSignal,
   });
 
   const chunks: string[] = [];

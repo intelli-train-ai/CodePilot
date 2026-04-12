@@ -41,6 +41,10 @@ export interface OrchestrationParams {
   levelId: string;
   defaultProviderId?: string;
   defaultModel?: string;
+  /** Per-role provider/model overrides (highest priority after level JSON) */
+  gatekeeper?: { providerId?: string; model?: string };
+  challenger?: { providerId?: string; model?: string };
+  grader?: { providerId?: string; model?: string };
   abortSignal?: AbortSignal;
 }
 
@@ -132,22 +136,24 @@ export async function* runArenaOrchestration(
   }
   const level = loaded.config;
 
-  // Inject default provider/model into level config so role modules pick them up
-  // when the level JSON doesn't specify per-role overrides
-  if (params.defaultProviderId || params.defaultModel) {
-    if (!level.roleConfig) {
-      level.roleConfig = {};
+  // Inject provider/model into level config so role modules pick them up.
+  // Priority: level JSON roleConfig > per-role API override > flat default API params.
+  // Always runs — ensures role modules never fall back to a mismatched system default.
+  if (!level.roleConfig) {
+    level.roleConfig = {};
+  }
+  for (const role of ['gatekeeper', 'challenger', 'grader'] as const) {
+    const roleOverride = params[role]; // per-role override from API request
+    if (!level.roleConfig[role]) {
+      level.roleConfig[role] = {};
     }
-    for (const role of ['gatekeeper', 'challenger', 'grader'] as const) {
-      if (!level.roleConfig[role]) {
-        level.roleConfig[role] = {};
-      }
-      if (!level.roleConfig[role]!.providerId && params.defaultProviderId) {
-        level.roleConfig[role]!.providerId = params.defaultProviderId;
-      }
-      if (!level.roleConfig[role]!.model && params.defaultModel) {
-        level.roleConfig[role]!.model = params.defaultModel;
-      }
+    if (!level.roleConfig[role]!.providerId) {
+      level.roleConfig[role]!.providerId =
+        roleOverride?.providerId || params.defaultProviderId || '';
+    }
+    if (!level.roleConfig[role]!.model) {
+      level.roleConfig[role]!.model =
+        roleOverride?.model || params.defaultModel || '';
     }
   }
 

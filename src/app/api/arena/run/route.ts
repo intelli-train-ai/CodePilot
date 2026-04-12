@@ -29,7 +29,15 @@ export async function POST(request: NextRequest) {
   if (authError) return authError;
 
   // Parse request body
-  let body: { worldId: string; levelId: string; providerId?: string; model?: string };
+  let body: {
+    worldId: string;
+    levelId: string;
+    providerId?: string;  // legacy flat default
+    model?: string;       // legacy flat default
+    gatekeeper?: { providerId?: string; model?: string };
+    challenger?: { providerId?: string; model?: string };
+    grader?: { providerId?: string; model?: string };
+  };
   try {
     body = await request.json();
   } catch {
@@ -66,6 +74,9 @@ export async function POST(request: NextRequest) {
           levelId: body.levelId,
           defaultProviderId: body.providerId,
           defaultModel: body.model,
+          gatekeeper: body.gatekeeper,
+          challenger: body.challenger,
+          grader: body.grader,
           abortSignal: abortController.signal,
         });
 

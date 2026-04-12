@@ -74,6 +74,12 @@ The overall "passed" field should be true ONLY if ALL required criteria passed.`
     opts.level.roleConfig?.grader?.model || '',
   );
 
+  // Combine client disconnect signal with per-call timeout so both work
+  const timeoutSignal = AbortSignal.timeout(120_000);
+  const abortSignal = opts.abortSignal
+    ? AbortSignal.any([opts.abortSignal, timeoutSignal])
+    : timeoutSignal;
+
   // Attempt 1: Output.object() (native structured output)
   try {
     const result = await generateText({
@@ -81,7 +87,7 @@ The overall "passed" field should be true ONLY if ALL required criteria passed.`
       output: Output.object({ schema: GraderOutputSchema }),
       system: systemPrompt,
       prompt: graderPrompt,
-      abortSignal: opts.abortSignal || AbortSignal.timeout(120_000),
+      abortSignal,
     });
 
     if (result.output) {
@@ -103,7 +109,7 @@ The overall "passed" field should be true ONLY if ALL required criteria passed.`
     model,
     system: systemPrompt + GRADER_JSON_INSTRUCTION,
     prompt: graderPrompt,
-    abortSignal: opts.abortSignal || AbortSignal.timeout(120_000),
+    abortSignal,
   });
 
   const parsed = tryParseGraderJson(result.text);

@@ -155,8 +155,9 @@ export function useArenaSSE(): UseArenaSSEReturn {
           body: JSON.stringify({
             worldId: params.worldId,
             levelId: params.levelId,
-            providerId: params.gatekeeperProviderId,
-            model: params.gatekeeperModel,
+            gatekeeper: { providerId: params.gatekeeperProviderId, model: params.gatekeeperModel },
+            challenger: { providerId: params.challengerProviderId, model: params.challengerModel },
+            grader: { providerId: params.graderProviderId, model: params.graderModel },
           }),
           signal: controller.signal,
         });

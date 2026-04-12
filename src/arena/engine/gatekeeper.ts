@@ -68,6 +68,12 @@ export async function callGatekeeper(opts: {
     opts.level.roleConfig?.gatekeeper?.model || '',
   );
 
+  // Combine client disconnect signal with per-call timeout so both work
+  const timeoutSignal = AbortSignal.timeout(60_000);
+  const abortSignal = opts.abortSignal
+    ? AbortSignal.any([opts.abortSignal, timeoutSignal])
+    : timeoutSignal;
+
   // Attempt 1: Output.object() (native structured output)
   try {
     const result = await generateText({
@@ -77,7 +83,7 @@ export async function callGatekeeper(opts: {
       ...(opts.transcript.length > 0
         ? { messages: opts.transcript }
         : { prompt: 'Begin the conversation.' }),
-      abortSignal: opts.abortSignal || AbortSignal.timeout(60_000),
+      abortSignal,
     });
 
     if (result.output) {
@@ -104,7 +110,7 @@ export async function callGatekeeper(opts: {
         ...(opts.transcript.length > 0
           ? { messages: opts.transcript }
           : { prompt: 'Begin the conversation. Respond with the JSON format specified in the system prompt.' }),
-        abortSignal: opts.abortSignal || AbortSignal.timeout(60_000),
+        abortSignal,
       });
 
       const parsed = tryParseGatekeeperJson(result.text);

@@ -61,8 +61,8 @@ apps/site/node_modules/
 
 
 # claude code session data
-.claude/
-.claude/worktrees/
+#.claude/
+#.claude/worktrees/
 
 # gstack security reports
 .gstack/
